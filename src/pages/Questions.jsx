@@ -1,0 +1,238 @@
+import { useState, useEffect } from 'react';
+import api from '../utils/api';
+import DataTable from '../components/DataTable';
+import Modal from '../components/Modal';
+import { Plus } from 'lucide-react';
+
+const Questions = () => {
+    const [questions, setQuestions] = useState([]);
+    const [languages, setLanguages] = useState([]);
+    const [topics, setTopics] = useState([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentQuestion, setCurrentQuestion] = useState(null);
+    const [formData, setFormData] = useState({
+        question: '',
+        languageId: '',
+        topicId: ''
+    });
+    const [loading, setLoading] = useState(false);
+    const [filterLanguage, setFilterLanguage] = useState('');
+    const [filterTopic, setFilterTopic] = useState('');
+
+    const fetchData = async () => {
+        try {
+            const [questionsRes, languagesRes, topicsRes] = await Promise.all([
+                api.get('/questions'),
+                api.get('/languages'),
+                api.get('/topics')
+            ]);
+            setQuestions(questionsRes.data);
+            setLanguages(languagesRes.data);
+            setTopics(topicsRes.data);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    // Derived state for available topics in form based on selected language
+    const formTopics = topics.filter(t => {
+        const tLangId = t.languageId?._id || t.languageId;
+        return tLangId === formData.languageId;
+    });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            if (currentQuestion) {
+                await api.put(`/questions/${currentQuestion._id}`, formData);
+            } else {
+                await api.post('/questions', formData);
+            }
+            fetchData();
+            closeModal();
+        } catch (error) {
+            console.error('Error saving question:', error);
+            alert(error.response?.data?.message || 'Error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async (question) => {
+        if (window.confirm('Are you sure you want to delete this question?')) {
+            try {
+                await api.delete(`/questions/${question._id}`);
+                fetchData();
+            } catch (error) {
+                console.error('Error deleting question:', error);
+            }
+        }
+    };
+
+    const openModal = (question = null) => {
+        if (question) {
+            const langId = question.languageId?._id || question.languageId;
+            setCurrentQuestion(question);
+            setFormData({
+                question: question.question,
+                languageId: langId,
+                topicId: question.topicId?._id || question.topicId
+            });
+        } else {
+            setCurrentQuestion(null);
+            setFormData({ question: '', languageId: '', topicId: '' });
+        }
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setCurrentQuestion(null);
+        setFormData({ question: '', languageId: '', topicId: '' });
+    };
+
+    const filteredQuestions = questions.filter(q => {
+        const qLangId = q.languageId?._id || q.languageId;
+        const qTopicId = q.topicId?._id || q.topicId;
+        const matchesLanguage = filterLanguage ? qLangId === filterLanguage : true;
+        const matchesTopic = filterTopic ? qTopicId === filterTopic : true;
+        return matchesLanguage && matchesTopic;
+    });
+
+    // Filter topics for the filter dropdown
+    const filterTopics = filterLanguage
+        ? topics.filter(t => (t.languageId?._id || t.languageId) === filterLanguage)
+        : [];
+
+    const columns = [
+        { header: 'Question', accessor: 'question' },
+        { header: 'Language', render: (row) => row.languageId?.name || '-' },
+        { header: 'Topic', render: (row) => row.topicId?.name || '-' }
+    ];
+
+    return (
+        <div>
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h1 className="text-2xl font-bold">Question Management</h1>
+                <div className="flex gap-4 w-full md:w-auto">
+                    <select
+                        className="px-4 py-2 border rounded-lg w-full md:w-48"
+                        value={filterLanguage}
+                        onChange={(e) => {
+                            setFilterLanguage(e.target.value);
+                            setFilterTopic(''); // Reset topic filter on language change
+                        }}
+                    >
+                        <option value="">All Languages</option>
+                        {languages.map(lang => (
+                            <option key={lang._id} value={lang._id}>{lang.name}</option>
+                        ))}
+                    </select>
+                    <select
+                        className="px-4 py-2 border rounded-lg w-full md:w-48 disabled:bg-gray-100"
+                        value={filterTopic}
+                        onChange={(e) => setFilterTopic(e.target.value)}
+                        disabled={!filterLanguage}
+                    >
+                        <option value="">All Topics</option>
+                        {filterTopics.map(topic => (
+                            <option key={topic._id} value={topic._id}>{topic.name}</option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={() => openModal()}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 whitespace-nowrap"
+                    >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Add Question
+                    </button>
+                </div>
+            </div>
+
+            <DataTable
+                columns={columns}
+                data={filteredQuestions}
+                onEdit={openModal}
+                onDelete={handleDelete}
+            />
+
+            <Modal
+                isOpen={isModalOpen}
+                onClose={closeModal}
+                title={currentQuestion ? 'Edit Question' : 'Add Question'}
+            >
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Language</label>
+                        <select
+                            name="languageId"
+                            required
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            value={formData.languageId}
+                            onChange={(e) => setFormData({
+                                ...formData,
+                                languageId: e.target.value,
+                                topicId: '' // Reset topic on language change
+                            })}
+                        >
+                            <option value="">Select Language</option>
+                            {languages.map(lang => (
+                                <option key={lang._id} value={lang._id}>{lang.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Topic</label>
+                        <select
+                            name="topicId"
+                            required
+                            disabled={!formData.languageId}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+                            value={formData.topicId}
+                            onChange={(e) => setFormData({ ...formData, topicId: e.target.value })}
+                        >
+                            <option value="">Select Topic</option>
+                            {formTopics.map(topic => (
+                                <option key={topic._id} value={topic._id}>{topic.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Question</label>
+                        <textarea
+                            required
+                            rows="4"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            value={formData.question}
+                            onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                        ></textarea>
+                        <p className="text-xs text-gray-500 mt-1">Student answers will be evaluated automatically by Gemini AI.</p>
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                        <button
+                            type="button"
+                            onClick={closeModal}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:bg-indigo-400"
+                        >
+                            {loading ? 'Saving...' : 'Save'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+        </div>
+    );
+};
+
+export default Questions;
