@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { Plus, Eye } from 'lucide-react';
 
 const Students = () => {
@@ -12,6 +13,9 @@ const Students = () => {
     const [currentStudent, setCurrentStudent] = useState(null);
     const [loading, setLoading] = useState(false);
     const [filterName, setFilterName] = useState('');
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     // History modal state
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -146,6 +150,16 @@ const Students = () => {
         student.name.toLowerCase().includes(filterName.toLowerCase())
     );
 
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+
+    const handleFilterNameChange = (e) => {
+        setFilterName(e.target.value);
+        setCurrentPage(1);
+    };
+
     const openHistoryModal = async (student) => {
         setHistoryStudent(student);
         setHistoryData([]);
@@ -202,7 +216,7 @@ const Students = () => {
                         placeholder="Filter by Name..."
                         className="px-4 py-2 border rounded-lg w-full md:w-64"
                         value={filterName}
-                        onChange={(e) => setFilterName(e.target.value)}
+                        onChange={handleFilterNameChange}
                     />
                     <button
                         onClick={() => openModal()}
@@ -216,9 +230,16 @@ const Students = () => {
 
             <DataTable
                 columns={columns}
-                data={filteredStudents}
+                data={currentItems}
                 onEdit={openModal}
                 onDelete={handleDelete}
+            />
+
+            <Pagination
+                totalItems={filteredStudents.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
             />
 
             <Modal
@@ -467,3 +488,4 @@ const Students = () => {
 };
 
 export default Students;
+

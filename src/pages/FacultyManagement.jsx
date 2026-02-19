@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { Plus, Trash2 } from 'lucide-react';
 
 const FacultyManagement = () => {
@@ -14,6 +15,9 @@ const FacultyManagement = () => {
         email: '',
         password: ''
     });
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const fetchFaculties = async () => {
         try {
@@ -65,6 +69,11 @@ const FacultyManagement = () => {
         { header: 'Email', accessor: 'email' },
     ];
 
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = faculties.slice(indexOfFirstItem, indexOfLastItem);
+
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
@@ -80,8 +89,15 @@ const FacultyManagement = () => {
 
             <DataTable
                 columns={columns}
-                data={faculties}
+                data={currentItems}
                 onDelete={handleDelete}
+            />
+
+            <Pagination
+                totalItems={faculties.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
             />
 
             <Modal
@@ -117,3 +133,4 @@ const FacultyManagement = () => {
 };
 
 export default FacultyManagement;
+

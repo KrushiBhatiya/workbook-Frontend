@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { Plus } from 'lucide-react';
 
 const Languages = () => {
@@ -11,6 +12,9 @@ const Languages = () => {
     const [formData, setFormData] = useState({ name: '' });
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const fetchLanguages = async () => {
         try {
@@ -81,6 +85,16 @@ const Languages = () => {
         lang.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredLanguages.slice(indexOfFirstItem, indexOfLastItem);
+
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+        setCurrentPage(1);
+    };
+
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
@@ -100,15 +114,22 @@ const Languages = () => {
                     placeholder="Filter by language name..."
                     className="w-full md:w-64 px-4 py-2 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={handleSearchChange}
                 />
             </div>
 
             <DataTable
                 columns={columns}
-                data={filteredLanguages}
+                data={currentItems}
                 onEdit={openModal}
                 onDelete={handleDelete}
+            />
+
+            <Pagination
+                totalItems={filteredLanguages.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
             />
 
             <Modal
@@ -150,3 +171,4 @@ const Languages = () => {
 };
 
 export default Languages;
+

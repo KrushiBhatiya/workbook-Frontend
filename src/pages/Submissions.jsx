@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
 import { Eye, Search, Calendar, X } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
+import Pagination from '../components/Pagination';
 
 const Submissions = () => {
     const [stats, setStats] = useState({ submitted: [], notSubmitted: [] });
@@ -19,6 +20,11 @@ const Submissions = () => {
     // Faculty Filter
     const [faculties, setFaculties] = useState([]);
     const [selectedFaculty, setSelectedFaculty] = useState('');
+
+    // Pagination states
+    const [submittedPage, setSubmittedPage] = useState(1);
+    const [notSubmittedPage, setNotSubmittedPage] = useState(1);
+    const itemsPerPage = 5;
 
     useEffect(() => {
         const fetchFaculties = async () => {
@@ -45,6 +51,10 @@ const Submissions = () => {
     };
 
     useEffect(() => {
+        // Reset pages when filters change
+        setSubmittedPage(1);
+        setNotSubmittedPage(1);
+
         // Debounce search
         const timer = setTimeout(() => {
             fetchSubmissions();
@@ -55,6 +65,16 @@ const Submissions = () => {
     const handleViewDetails = (studentData) => {
         setSelectedStudent(studentData);
     };
+
+    // Pagination logic for Submitted
+    const submittedLastIndex = submittedPage * itemsPerPage;
+    const submittedFirstIndex = submittedLastIndex - itemsPerPage;
+    const currentSubmitted = stats.submitted.slice(submittedFirstIndex, submittedLastIndex);
+
+    // Pagination logic for Not Submitted
+    const notSubmittedLastIndex = notSubmittedPage * itemsPerPage;
+    const notSubmittedFirstIndex = notSubmittedLastIndex - itemsPerPage;
+    const currentNotSubmitted = stats.notSubmitted.slice(notSubmittedFirstIndex, notSubmittedLastIndex);
 
     return (
         <div className="p-6">
@@ -129,10 +149,10 @@ const Submissions = () => {
                             <tbody className="divide-y divide-gray-200">
                                 {loading ? (
                                     <tr><td colSpan="4" className="text-center py-8">Loading...</td></tr>
-                                ) : stats.submitted.length === 0 ? (
+                                ) : currentSubmitted.length === 0 ? (
                                     <tr><td colSpan="4" className="text-center py-8 text-gray-500">No submissions found for this date.</td></tr>
                                 ) : (
-                                    stats.submitted.map((item, idx) => (
+                                    currentSubmitted.map((item, idx) => (
                                         <tr key={idx} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div className="font-medium text-gray-900">{item.student.name}</div>
@@ -159,6 +179,14 @@ const Submissions = () => {
                             </tbody>
                         </table>
                     </div>
+                    <div className="px-6 py-3 border-t bg-gray-50">
+                        <Pagination
+                            totalItems={stats.submitted.length}
+                            itemsPerPage={itemsPerPage}
+                            currentPage={submittedPage}
+                            onPageChange={setSubmittedPage}
+                        />
+                    </div>
                 </div>
 
                 {/* Not Submitted Section */}
@@ -177,10 +205,10 @@ const Submissions = () => {
                             <tbody className="divide-y divide-gray-200">
                                 {loading ? (
                                     <tr><td colSpan="2" className="text-center py-8">Loading...</td></tr>
-                                ) : stats.notSubmitted.length === 0 ? (
+                                ) : currentNotSubmitted.length === 0 ? (
                                     <tr><td colSpan="2" className="text-center py-8 text-gray-500">Everyone has submitted!</td></tr>
                                 ) : (
-                                    stats.notSubmitted.map((student) => (
+                                    currentNotSubmitted.map((student) => (
                                         <tr key={student._id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div className="font-medium text-gray-900">{student.name}</div>
@@ -192,6 +220,14 @@ const Submissions = () => {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                    <div className="px-6 py-3 border-t bg-gray-50">
+                        <Pagination
+                            totalItems={stats.notSubmitted.length}
+                            itemsPerPage={itemsPerPage}
+                            currentPage={notSubmittedPage}
+                            onPageChange={setNotSubmittedPage}
+                        />
                     </div>
                 </div>
             </div>
@@ -284,3 +320,4 @@ const Submissions = () => {
 };
 
 export default Submissions;
+

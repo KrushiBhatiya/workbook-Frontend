@@ -77,12 +77,56 @@ const MyWorkbook = () => {
         return topicQuestions.every(q => !!existingSubmissions[q._id]);
     };
 
-    // Helper to check if a topic should be enabled
-    const isTopicEnabled = (index) => {
-        if (index === 0) return true;
-        const previousTopic = topics[index - 1];
-        return isTopicCompleted(previousTopic._id);
+    // Helper to calculate all topic enabled states in sequence
+    const getTopicEnabledStates = () => {
+        const states = {}; // Track { unlocked: bool, enabled: bool }
+
+        topics.forEach((topic, index) => {
+            const topicQuestions = questions.filter(q => (q.topicId?._id || q.topicId) === topic._id);
+            const hasQuestions = topicQuestions.length > 0;
+
+            // 1. Completion/History Check
+            const currentAndFutureTopics = topics.slice(index);
+            const hasHistory = currentAndFutureTopics.some(t => {
+                const tQs = questions.filter(q => (q.topicId?._id || q.topicId) === t._id);
+                return tQs.some(q => !!existingSubmissions[q._id]);
+            });
+            const completed = isTopicCompleted(topic._id);
+
+            // 2. Determine "Unlocked" status (Basis for progression)
+            let isUnlocked = false;
+            if (index === 0) {
+                isUnlocked = true; // Topic 1 is the starting point
+            } else {
+                const prevTopicId = topics[index - 1]._id;
+                const prevUnlocked = states[prevTopicId].unlocked;
+                const prevCompleted = isTopicCompleted(prevTopicId);
+                // Sequential Rule: Unlocks if previous was unlocked AND is now completed
+                isUnlocked = prevUnlocked && prevCompleted;
+            }
+
+            // Protection: If it was already traversed or completed, it must be unlocked
+            if (hasHistory || completed) {
+                isUnlocked = true;
+            }
+
+            // 3. Determine "Enabled" status (Interactive)
+            // Rule: Topic must be Unlocked AND have at least one question
+            states[topic._id] = {
+                unlocked: isUnlocked,
+                enabled: isUnlocked && hasQuestions
+            };
+        });
+
+        // Flatten for the UI
+        const finalStates = {};
+        Object.keys(states).forEach(id => {
+            finalStates[id] = states[id].enabled;
+        });
+        return finalStates;
     };
+
+    const enabledStates = getTopicEnabledStates();
 
     const toggleTopic = (topicId, enabled) => {
         if (!enabled) return;
@@ -160,7 +204,8 @@ const MyWorkbook = () => {
                                 <p className="text-sm text-gray-500 mt-2">Click to view topics</p>
                             </div>
                         ))
-                    )}
+                    )
+                    }
                 </div>
             </div>
         );
@@ -186,9 +231,11 @@ const MyWorkbook = () => {
                     ) : (
                         <div className="space-y-4">
                             {topics.map((topic, index) => {
-                                const enabled = isTopicEnabled(index);
+                                const enabled = enabledStates[topic._id];
                                 const completed = isTopicCompleted(topic._id);
                                 const topicQuestions = questions.filter(q => (q.topicId?._id || q.topicId) === topic._id);
+                                const completedCount = topicQuestions.filter(q => !!existingSubmissions[q._id]).length;
+                                const totalCount = topicQuestions.length;
 
                                 return (
                                     <div key={topic._id} className={`flex bg-white rounded-lg shadow-sm border overflow-hidden transition-all ${enabled ? 'border-gray-200' : 'border-gray-200 opacity-70 grayscale-[0.3]'}`}>
@@ -203,12 +250,29 @@ const MyWorkbook = () => {
                                                 onClick={() => toggleTopic(topic._id, enabled)}
                                                 className={`w-full flex items-center justify-between p-4 transition-colors text-left ${enabled ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-not-allowed'}`}
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`font-semibold text-lg ${enabled ? 'text-gray-800' : 'text-gray-400'}`}>{topic.name}</span>
-                                                    {completed && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Completed</span>}
-                                                    {!enabled && <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Locked</span>}
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 flex-wrap">
+                                                        <span className={`font-semibold text-lg ${enabled ? 'text-gray-800' : 'text-gray-400'}`}>{topic.name}</span>
+
+                                                        {totalCount > 0 ? (
+                                                            <>
+                                                                {enabled && (
+                                                                    <span className={`text-sm font-medium text-gray-500`}>
+                                                                        ({completedCount}/{totalCount} Completed)
+                                                                    </span>
+                                                                )}
+                                                                {completed ? (
+                                                                    <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Completed</span>
+                                                                ) : !enabled ? (
+                                                                    <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Locked</span>
+                                                                ) : null}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Locked</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {expandedTopics[topic._id] ? <ChevronDown className="text-gray-400 w-5 h-5" /> : <ChevronRight className="text-gray-400 w-5 h-5" />}
+                                                {expandedTopics[topic._id] ? <ChevronDown className="text-gray-400 w-5 h-5 flex-shrink-0 ml-2" /> : <ChevronRight className="text-gray-400 w-5 h-5 flex-shrink-0 ml-2" />}
                                             </button>
 
                                             {expandedTopics[topic._id] && (

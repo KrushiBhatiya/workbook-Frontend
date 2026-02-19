@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { Plus } from 'lucide-react';
 
 const Topics = () => {
@@ -13,6 +14,9 @@ const Topics = () => {
     const [loading, setLoading] = useState(false);
     const [filterLanguage, setFilterLanguage] = useState('');
     const [topicQuery, setTopicQuery] = useState('');
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const fetchData = async () => {
         try {
@@ -87,6 +91,21 @@ const Topics = () => {
         return matchesLanguage && matchesName;
     });
 
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredTopics.slice(indexOfFirstItem, indexOfLastItem);
+
+    const handleSearchChange = (e) => {
+        setTopicQuery(e.target.value);
+        setCurrentPage(1);
+    };
+
+    const handleLanguageFilterChange = (e) => {
+        setFilterLanguage(e.target.value);
+        setCurrentPage(1);
+    };
+
     const columns = [
         { header: 'Topic Name', accessor: 'name' },
         { header: 'Language', render: (row) => row.languageId?.name || '-' }
@@ -102,12 +121,12 @@ const Topics = () => {
                         placeholder="Search topics..."
                         className="px-4 py-2 border rounded-lg w-full md:w-64"
                         value={topicQuery}
-                        onChange={(e) => setTopicQuery(e.target.value)}
+                        onChange={handleSearchChange}
                     />
                     <select
                         className="px-4 py-2 border rounded-lg w-full md:w-64"
                         value={filterLanguage}
-                        onChange={(e) => setFilterLanguage(e.target.value)}
+                        onChange={handleLanguageFilterChange}
                     >
                         <option value="">All Languages</option>
                         {languages.map(lang => (
@@ -126,9 +145,16 @@ const Topics = () => {
 
             <DataTable
                 columns={columns}
-                data={filteredTopics}
+                data={currentItems}
                 onEdit={openModal}
                 onDelete={handleDelete}
+            />
+
+            <Pagination
+                totalItems={filteredTopics.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
             />
 
             <Modal
@@ -185,3 +211,4 @@ const Topics = () => {
 };
 
 export default Topics;
+
