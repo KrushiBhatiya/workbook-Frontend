@@ -22,6 +22,9 @@ const MyWorkbook = () => {
     const [loading, setLoading] = useState(false);
     const [existingSubmissions, setExistingSubmissions] = useState({}); // Map questionId -> submission
 
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+
     useEffect(() => {
         const fetchMyProfile = async () => {
             try {
@@ -143,20 +146,51 @@ const MyWorkbook = () => {
             imageUrl: ''
         });
         setIsSubmissionOpen(true);
+        setSelectedFile(null);
+        setPreviewUrl(null);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSubmission = async (e) => {
         e.preventDefault();
+
+        if (!submissionData.answerText.trim() && !selectedFile && !submissionData.imageUrl.trim()) {
+            alert('Please provide either an answer text or upload an image.');
+            return;
+        }
+
         setLoading(true);
+
+        const formData = new FormData();
+        formData.append('courseId', studentData.courseId._id);
+        formData.append('languageId', selectedLanguage._id);
+        formData.append('topicId', currentQuestionForSubmission.topicId._id || currentQuestionForSubmission.topicId);
+        formData.append('questionId', currentQuestionForSubmission._id);
+        formData.append('facultyId', studentData.facultyId._id || studentData.facultyId);
+        formData.append('answerText', submissionData.answerText);
+
+        if (selectedFile) {
+            formData.append('image', selectedFile);
+        } else if (submissionData.imageUrl) {
+            formData.append('imageUrl', submissionData.imageUrl);
+        }
+
         try {
-            await api.post('/submissions', {
-                courseId: studentData.courseId._id,
-                languageId: selectedLanguage._id,
-                topicId: currentQuestionForSubmission.topicId._id || currentQuestionForSubmission.topicId,
-                questionId: currentQuestionForSubmission._id,
-                facultyId: studentData.facultyId._id || studentData.facultyId,
-                answerText: submissionData.answerText,
-                imageUrl: submissionData.imageUrl
+            await api.post('/submissions', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
             });
 
             // Refresh submissions
@@ -337,16 +371,68 @@ const MyWorkbook = () => {
                         {currentQuestionForSubmission?.question}
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Answer Text</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Answer Text (Optional if image uploaded)</label>
                         <textarea
-                            required
                             rows="5"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                             value={submissionData.answerText}
                             onChange={(e) => setSubmissionData({ ...submissionData, answerText: e.target.value })}
-                            placeholder="Write your answer here..."
+                            placeholder="Write your answer here or leave blank if uploading an image..."
                         ></textarea>
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Upload Image of Work (Handwritten/Photo)
+                        </label>
+                        <div className="mt-1 flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-400 transition-colors bg-gray-50/50">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                id="image-upload"
+                            />
+                            <label
+                                htmlFor="image-upload"
+                                className="cursor-pointer flex flex-col items-center gap-2"
+                            >
+                                <Upload className="w-8 h-8 text-gray-400" />
+                                <span className="text-sm text-gray-600 font-medium">
+                                    {selectedFile ? selectedFile.name : 'Click to select an image'}
+                                </span>
+                                <span className="text-xs text-gray-400">PNG, JPG up to 10MB</span>
+                            </label>
+
+                            {previewUrl && (
+                                <div className="mt-4 w-full max-w-[200px] relative group">
+                                    <img
+                                        src={previewUrl}
+                                        alt="Preview"
+                                        className="rounded-lg shadow-sm border border-gray-200 object-cover aspect-video w-full"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
+                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                            <div className="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500">OR</span>
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Image URL (Optional)</label>
                         <input
