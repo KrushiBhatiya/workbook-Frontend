@@ -428,12 +428,10 @@ const MyWorkbook = () => {
                         <div className="absolute inset-0 flex items-center" aria-hidden="true">
                             <div className="w-full border-t border-gray-300"></div>
                         </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">OR</span>
-                        </div>
+
                     </div>
 
-                    <div>
+                    {/* <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Image URL (Optional)</label>
                         <input
                             type="text"
@@ -442,7 +440,7 @@ const MyWorkbook = () => {
                             value={submissionData.imageUrl}
                             onChange={(e) => setSubmissionData({ ...submissionData, imageUrl: e.target.value })}
                         />
-                    </div>
+                    </div> */}
                     <div className="flex justify-end space-x-3 pt-2">
                         <button type="button" onClick={() => setIsSubmissionOpen(false)} className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
                         <button type="submit" disabled={loading} className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors disabled:bg-indigo-400 flex items-center gap-2">
@@ -452,7 +450,7 @@ const MyWorkbook = () => {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    Checking with AI...
+                                    Checking...
                                 </>
                             ) : 'Submit Answer'}
                         </button>
