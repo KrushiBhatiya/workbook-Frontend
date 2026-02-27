@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
 import AuthContext from '../context/AuthContext';
-import { ChevronDown, ChevronRight, Upload, ArrowLeft } from 'lucide-react';
+import { ChevronDown, ChevronRight, Upload, ArrowLeft, Download } from 'lucide-react';
 import Modal from '../components/Modal';
 
 const MyWorkbook = () => {
@@ -24,6 +24,22 @@ const MyWorkbook = () => {
 
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
+
+    const handleDownload = async (url, fileName) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = fileName || 'question-image.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading image:', error);
+            alert('Could not download image. Please try again or right-click to save.');
+        }
+    };
 
     useEffect(() => {
         const fetchMyProfile = async () => {
@@ -316,7 +332,27 @@ const MyWorkbook = () => {
                                                             <div className="flex items-start">
                                                                 <span className={`font-bold mr-2 mt-1 ${enabled ? 'text-gray-500' : 'text-gray-300'}`}>Q{qIdx + 1}.</span>
                                                                 <div className="flex-1">
-                                                                    <p className={`text-lg mb-3 ${enabled ? 'text-gray-800' : 'text-gray-400'}`}>{q.question}</p>
+                                                                    {q.question && <p className={`text-lg mb-3 ${enabled ? 'text-gray-800' : 'text-gray-400'}`}>{q.question}</p>}
+
+                                                                    {q.imageUrl && (
+                                                                        <div className="mb-4 relative group w-fit">
+                                                                            <img
+                                                                                src={q.imageUrl}
+                                                                                alt="Question"
+                                                                                className="max-h-64 rounded-lg border shadow-sm object-contain bg-white"
+                                                                            />
+                                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                                                                                <button
+                                                                                    onClick={() => handleDownload(q.imageUrl, `question-${q._id}.png`)}
+                                                                                    className="bg-white text-gray-800 px-3 py-2 rounded-full shadow-lg hover:bg-indigo-50 transition-colors flex items-center gap-2 font-medium text-sm"
+                                                                                    title="Download Image"
+                                                                                >
+                                                                                    <Download className="w-4 h-4" />
+                                                                                    Download
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
 
                                                                     <div className="flex items-center justify-between mt-2">
                                                                         <div className="text-sm">
@@ -368,7 +404,28 @@ const MyWorkbook = () => {
                 <form onSubmit={handleSubmission} className="space-y-4">
                     <div className="bg-gray-50 p-3 rounded text-sm mb-4 border">
                         <strong className="block text-gray-700 mb-1">Question:</strong>
-                        {currentQuestionForSubmission?.question}
+                        {currentQuestionForSubmission?.question && (
+                            <p className="mb-2">{currentQuestionForSubmission.question}</p>
+                        )}
+                        {currentQuestionForSubmission?.imageUrl && (
+                            <div className="relative group w-fit">
+                                <img
+                                    src={currentQuestionForSubmission.imageUrl}
+                                    alt="Question"
+                                    className="max-h-40 rounded border shadow-sm object-contain bg-white"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDownload(currentQuestionForSubmission.imageUrl, `question-${currentQuestionForSubmission._id}.png`)}
+                                        className="bg-white text-gray-800 p-1.5 rounded-full shadow-lg hover:bg-indigo-50 transition-colors"
+                                        title="Download Image"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Answer Text (Optional if image uploaded)</label>

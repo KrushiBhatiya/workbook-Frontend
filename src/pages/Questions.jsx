@@ -14,8 +14,10 @@ const Questions = () => {
     const [formData, setFormData] = useState({
         question: '',
         languageId: '',
-        topicId: ''
+        topicId: '',
+        image: null
     });
+    const [imagePreview, setImagePreview] = useState(null);
     const [loading, setLoading] = useState(false);
     const [filterLanguage, setFilterLanguage] = useState('');
     const [filterTopic, setFilterTopic] = useState('');
@@ -50,12 +52,31 @@ const Questions = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.question && !formData.image && (!currentQuestion || !currentQuestion.imageUrl)) {
+            alert('Please provide either question text or an image.');
+            return;
+        }
+
         setLoading(true);
+
+        const data = new FormData();
+        data.append('question', formData.question);
+        data.append('languageId', formData.languageId);
+        data.append('topicId', formData.topicId);
+        if (formData.image) {
+            data.append('image', formData.image);
+        }
+
         try {
             if (currentQuestion) {
-                await api.put(`/questions/${currentQuestion._id}`, formData);
+                await api.put(`/questions/${currentQuestion._id}`, data, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
             } else {
-                await api.post('/questions', formData);
+                await api.post('/questions', data, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
             }
             fetchData();
             closeModal();
@@ -78,18 +99,37 @@ const Questions = () => {
         }
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB limit.');
+                return;
+            }
+            setFormData({ ...formData, image: file });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const openModal = (question = null) => {
         if (question) {
             const langId = question.languageId?._id || question.languageId;
             setCurrentQuestion(question);
             setFormData({
-                question: question.question,
+                question: question.question || '',
                 languageId: langId,
-                topicId: question.topicId?._id || question.topicId
+                topicId: question.topicId?._id || question.topicId,
+                image: null
             });
+            setImagePreview(question.imageUrl);
         } else {
             setCurrentQuestion(null);
-            setFormData({ question: '', languageId: '', topicId: '' });
+            setFormData({ question: '', languageId: '', topicId: '', image: null });
+            setImagePreview(null);
         }
         setIsModalOpen(true);
     };
@@ -97,7 +137,8 @@ const Questions = () => {
     const closeModal = () => {
         setIsModalOpen(false);
         setCurrentQuestion(null);
-        setFormData({ question: '', languageId: '', topicId: '' });
+        setFormData({ question: '', languageId: '', topicId: '', image: null });
+        setImagePreview(null);
     };
 
     const filteredQuestions = questions.filter(q => {
@@ -130,7 +171,21 @@ const Questions = () => {
     };
 
     const columns = [
-        { header: 'Question', accessor: 'question' },
+        {
+            header: 'Question',
+            render: (row) => (
+                <div className="flex flex-col gap-1">
+                    {row.question && <p className="line-clamp-2">{row.question}</p>}
+                    {row.imageUrl && (
+                        <img
+                            src={row.imageUrl}
+                            alt="Question"
+                            className="w-20 h-20 object-cover rounded border"
+                        />
+                    )}
+                </div>
+            )
+        },
         { header: 'Language', render: (row) => row.languageId?.name || '-' },
         { header: 'Topic', render: (row) => row.topicId?.name || '-' }
     ];
@@ -227,15 +282,43 @@ const Questions = () => {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Question</label>
+                        <label className="block text-sm font-medium text-gray-700">Question Text</label>
                         <textarea
-                            required
-                            rows="4"
+                            rows="3"
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                             value={formData.question}
                             onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                            placeholder="Type question text here..."
                         ></textarea>
-                        <p className="text-xs text-gray-500 mt-1">Student answers will be evaluated automatically by Gemini AI.</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Question Image</label>
+                        <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/jpg"
+                            onChange={handleFileChange}
+                            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                        />
+                        {imagePreview && (
+                            <div className="mt-2 relative">
+                                <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    className="max-h-40 rounded border"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFormData({ ...formData, image: null });
+                                        setImagePreview(currentQuestion?.imageUrl || null);
+                                    }}
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">Allowed: JPG, JPEG, PNG (Max 5MB). Either text or image is required.</p>
                     </div>
                     <div className="flex justify-end space-x-3">
                         <button
