@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api', // Adjust base URL as needed
+    baseURL: 'https://workbook-backend.onrender.com/api', // Adjust base URL as needed
 });
 
 // Add a request interceptor to include the token in headers
