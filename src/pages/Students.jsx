@@ -299,9 +299,12 @@ const Students = () => {
                                 onChange={handleChange}
                             >
                                 <option value="">Select Batch Time</option>
-                                <option value="Morning">Morning</option>
-                                <option value="Afternoon">Afternoon</option>
-                                <option value="Evening">Evening</option>
+                                <option value="8 to 10">8 to 10</option>
+                                <option value="10 to 12">10 to 12</option>
+                                <option value="12 to 2">12 to 2</option>
+                                <option value="2 to 4">2 to 4</option>
+                                <option value="4 to 6">4 to 6</option>
+                                <option value="6 to 8">6 to 8</option>
                             </select>
                         </div>
                         <div>
@@ -309,6 +312,9 @@ const Students = () => {
                             <input
                                 type="text"
                                 name="contact"
+                                pattern="\d{10}"
+                                maxLength="10"
+                                title="Please enter a valid 10-digit contact number."
                                 required
                                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                                 value={formData.contact}
@@ -392,6 +398,16 @@ const Students = () => {
                             <div>
                                 <h2 className="text-xl font-bold text-indigo-900">{historyStudent?.name}'s Submissions</h2>
                                 <p className="text-indigo-600 text-sm mt-1">Complete submission history — latest first</p>
+                                <div className="mt-3 flex items-center flex-wrap gap-2">
+                                    <span className="text-sm font-semibold text-gray-700 bg-white px-2 py-1 rounded-md border shadow-sm">
+                                        Languages Access ({historyStudent?.allowedLanguageIds?.length || 0}):
+                                    </span>
+                                    {historyStudent?.allowedLanguageIds?.map(lang => (
+                                        <span key={lang._id} className="text-xs font-medium bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full border border-indigo-200">
+                                            {lang.name}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                             <button
                                 onClick={() => setIsHistoryOpen(false)}

@@ -18,6 +18,7 @@ const Questions = () => {
         image: null
     });
     const [imagePreview, setImagePreview] = useState(null);
+    const [fullScreenImage, setFullScreenImage] = useState(null); // Full screen preview state
     const [loading, setLoading] = useState(false);
     const [filterLanguage, setFilterLanguage] = useState('');
     const [filterTopic, setFilterTopic] = useState('');
@@ -180,7 +181,8 @@ const Questions = () => {
                         <img
                             src={row.imageUrl}
                             alt="Question"
-                            className="w-20 h-20 object-cover rounded border"
+                            className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => setFullScreenImage(row.imageUrl)}
                         />
                     )}
                 </div>
@@ -346,6 +348,31 @@ const Questions = () => {
                     </div>
                 </form>
             </Modal>
+
+            {/* Full Screen Image Preview Modal */}
+            {fullScreenImage && (
+                <div
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200"
+                    onClick={() => setFullScreenImage(null)}
+                >
+                    <div className="relative max-w-4xl w-full flex items-center justify-center">
+                        <button
+                            className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors bg-white/10 rounded-full p-2"
+                            onClick={() => setFullScreenImage(null)}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <img
+                            src={fullScreenImage}
+                            alt="Full screen preview"
+                            className="max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

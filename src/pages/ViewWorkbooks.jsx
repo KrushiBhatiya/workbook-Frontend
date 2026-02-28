@@ -157,11 +157,20 @@ const ViewWorkbooks = () => {
                                                         ) : (
                                                             getQuestionsByTopic(topic._id).map((q, idx) => (
                                                                 <div key={q._id} className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm text-sm text-gray-700 flex items-start gap-3 hover:border-indigo-200 transition-colors">
-                                                                    <span className="font-bold flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 text-xs shrink-0">
+                                                                    <span className="font-bold flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 text-xs shrink-0 mt-1">
                                                                         Q{idx + 1}
                                                                     </span>
-                                                                    <div className="pt-1 leading-relaxed">
-                                                                        {q.question || <span className="italic text-gray-400">Image attached Question</span>}
+                                                                    <div className="pt-1 leading-relaxed w-full">
+                                                                        <div className="mb-2">
+                                                                            {q.question || <span className="italic text-gray-400">Image attached Question</span>}
+                                                                        </div>
+                                                                        {q.imageUrl && (
+                                                                            <div className="mt-2">
+                                                                                <a href={q.imageUrl} target="_blank" rel="noopener noreferrer">
+                                                                                    <img src={q.imageUrl} alt="Question" className="max-h-48 rounded-lg object-contain border border-gray-200 hover:opacity-90 transition-opacity cursor-pointer shadow-sm" />
+                                                                                </a>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             ))

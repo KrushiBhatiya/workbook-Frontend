@@ -137,7 +137,55 @@ const Submissions = () => {
             {/* Content Split */}
             <div className="grid grid-cols-1 gap-6">
 
-                {/* Submitted Section */}
+                {/* Not Submitted Section — FIRST */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-rose-50/50 px-6 py-4 border-b border-rose-100 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <AlertCircle className="w-5 h-5 text-rose-600" />
+                            <h2 className="text-lg font-bold text-rose-900">Not Submitted</h2>
+                        </div>
+                        <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold">
+                            {stats.notSubmitted.length} Students
+                        </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                                <tr>
+                                    <th className="px-6 py-3 text-left">Student</th>
+                                    <th className="px-6 py-3 text-left">Batch</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {loading ? (
+                                    <tr><td colSpan="2" className="text-center py-8">Loading...</td></tr>
+                                ) : currentNotSubmitted.length === 0 ? (
+                                    <tr><td colSpan="2" className="text-center py-8 text-gray-500">Everyone has submitted!</td></tr>
+                                ) : (
+                                    currentNotSubmitted.map((student) => (
+                                        <tr key={student._id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-gray-900">{student.name}</div>
+                                                <div className="text-sm text-gray-500">{student.email}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-500">{student.batchTime}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="px-6 py-3 border-t bg-gray-50">
+                        <Pagination
+                            totalItems={stats.notSubmitted.length}
+                            itemsPerPage={itemsPerPage}
+                            currentPage={notSubmittedPage}
+                            onPageChange={setNotSubmittedPage}
+                        />
+                    </div>
+                </div>
+
+                {/* Submitted Section — SECOND */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="bg-emerald-50/50 px-6 py-4 border-b border-emerald-100 flex justify-between items-center">
                         <div className="flex items-center gap-2">
@@ -200,152 +248,107 @@ const Submissions = () => {
                         />
                     </div>
                 </div>
-
-                {/* Not Submitted Section */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="bg-rose-50/50 px-6 py-4 border-b border-rose-100 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <AlertCircle className="w-5 h-5 text-rose-600" />
-                            <h2 className="text-lg font-bold text-rose-900">Not Submitted</h2>
-                        </div>
-                        <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold">
-                            {stats.notSubmitted.length} Students
-                        </span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-                                <tr>
-                                    <th className="px-6 py-3 text-left">Student</th>
-                                    <th className="px-6 py-3 text-left">Batch</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {loading ? (
-                                    <tr><td colSpan="2" className="text-center py-8">Loading...</td></tr>
-                                ) : currentNotSubmitted.length === 0 ? (
-                                    <tr><td colSpan="2" className="text-center py-8 text-gray-500">Everyone has submitted!</td></tr>
-                                ) : (
-                                    currentNotSubmitted.map((student) => (
-                                        <tr key={student._id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4">
-                                                <div className="font-medium text-gray-900">{student.name}</div>
-                                                <div className="text-sm text-gray-500">{student.email}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-500">{student.batchTime}</td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="px-6 py-3 border-t bg-gray-50">
-                        <Pagination
-                            totalItems={stats.notSubmitted.length}
-                            itemsPerPage={itemsPerPage}
-                            currentPage={notSubmittedPage}
-                            onPageChange={setNotSubmittedPage}
-                        />
-                    </div>
-                </div>
             </div>
 
-            {/* Detail Modal */}
-            <Modal
-                isOpen={!!selectedStudent}
-                onClose={() => setSelectedStudent(null)}
-                title={`${selectedStudent?.student?.name}'s Submissions`}
-            >
-                <div className="space-y-6">
-                    <div className="flex items-center gap-2 mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-                        <Calendar className="w-4 h-4 text-indigo-600" />
-                        <span className="text-sm font-semibold text-indigo-900">
-                            {new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        </span>
-                    </div>
-
-                    <div className="space-y-4">
-                        {selectedStudent?.submissions.map((sub, idx) => (
-                            <div key={sub._id} className="border border-gray-100 rounded-2xl p-4 sm:p-5 hover:border-indigo-200 transition-all bg-white shadow-sm ring-1 ring-gray-100">
-                                <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
-                                    <div className="flex items-start gap-3">
-                                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold shrink-0">
-                                            Q{idx + 1}
-                                        </div>
-                                        <h3 className="font-bold text-gray-900 leading-tight pt-1">
-                                            {sub.questionId?.question || 'Attached Image Question'}
-                                        </h3>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100 shrink-0">
-                                        <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
+            {/* Detail Modal — wide custom modal */}
+            {selectedStudent && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/60 shrink-0">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">{selectedStudent?.student?.name}'s Submissions</h3>
+                                <div className="flex items-center gap-1.5 mt-1 text-sm text-indigo-600">
+                                    <Calendar className="w-4 h-4" />
+                                    <span>{new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                                 </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedStudent(null)}
+                                className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-90"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-4">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Student Answer</h4>
+                        {/* Scrollable Body */}
+                        <div className="overflow-y-auto p-6 flex-1 space-y-5">
+                            {selectedStudent?.submissions.map((sub, idx) => (
+                                <div key={sub._id} className="border border-gray-100 rounded-2xl p-5 hover:border-indigo-200 transition-all bg-white shadow-sm ring-1 ring-gray-100">
+                                    {/* Question header */}
+                                    <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold shrink-0">
+                                                Q{idx + 1}
+                                            </div>
+                                            <h3 className="font-bold text-gray-900 leading-tight pt-1">
+                                                {sub.questionId?.question || 'Attached Image Question'}
+                                            </h3>
                                         </div>
-                                        <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-50 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed min-h-[100px]">
-                                            {sub.answerText || <span className="text-gray-400 italic">No text provided</span>}
+                                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100 shrink-0">
+                                            <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                                {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
                                         </div>
                                     </div>
 
-                                    {sub.imageUrl && (
+                                    {/* Content — full width answer, side-by-side only when image exists */}
+                                    <div className={`grid gap-5 ${sub.imageUrl ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Evidence</h4>
+                                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Student Answer</h4>
                                             </div>
-                                            <a
-                                                href={sub.imageUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="block group relative rounded-xl overflow-hidden border border-gray-100 shadow-sm transition-all hover:ring-4 hover:ring-indigo-50"
-                                            >
-                                                <img
-                                                    src={sub.imageUrl}
-                                                    alt="Submission"
-                                                    className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-500"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
-                                                    <span className="bg-white/95 backdrop-blur-sm text-gray-900 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                                                        Inspect Evidence
-                                                    </span>
-                                                </div>
-                                            </a>
+                                            <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed min-h-[100px]">
+                                                {sub.answerText || <span className="text-gray-400 italic">No text provided</span>}
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
 
-                                <div className="mt-5 flex flex-wrap gap-4 pt-4 border-t border-gray-50">
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                        <span className="font-bold text-gray-400">TRACK:</span>
-                                        <span className="px-2 py-0.5 bg-gray-100 rounded-md font-medium text-gray-600">{sub.languageId?.name}</span>
+                                        {sub.imageUrl && (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Evidence</h4>
+                                                </div>
+                                                <a
+                                                    href={sub.imageUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block group relative rounded-xl overflow-hidden border border-gray-100 shadow-sm transition-all hover:ring-4 hover:ring-indigo-50"
+                                                >
+                                                    <img
+                                                        src={sub.imageUrl}
+                                                        alt="Submission"
+                                                        className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                                                        <span className="bg-white/95 backdrop-blur-sm text-gray-900 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                                                            Inspect Evidence
+                                                        </span>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                        <span className="font-bold text-gray-400">MODULE:</span>
-                                        <span className="px-2 py-0.5 bg-gray-100 rounded-md font-medium text-gray-600">{sub.topicId?.name}</span>
+
+                                    <div className="mt-4 flex flex-wrap gap-4 pt-4 border-t border-gray-50">
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                            <span className="font-bold text-gray-400">Language:</span>
+                                            <span className="px-2 py-0.5 bg-gray-100 rounded-md font-medium text-gray-600">{sub.languageId?.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                            <span className="font-bold text-gray-400">Topic:</span>
+                                            <span className="px-2 py-0.5 bg-gray-100 rounded-md font-medium text-gray-600">{sub.topicId?.name}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
 
-                    <div className="mt-8 flex justify-end">
-                        <button
-                            onClick={() => setSelectedStudent(null)}
-                            className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-lg active:scale-95"
-                        >
-                            Done Reviewing
-                        </button>
                     </div>
                 </div>
-            </Modal>
+            )}
         </div>
     );
 };
