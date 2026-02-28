@@ -11,7 +11,10 @@ import {
     Upload,
     User,
     LogOut,
-    Shield
+    Shield,
+    FileText,
+    Library,
+    Files
 } from 'lucide-react';
 
 const facultyLinks = [
@@ -23,11 +26,13 @@ const facultyLinks = [
     { path: '/questions', label: 'Questions', icon: FileQuestion },
     { path: '/students', label: 'Students', icon: Users },
     { path: '/workbooks', label: 'Workbooks', icon: Book },
+    { path: '/materials', label: 'Materials', icon: FileText },
     { path: '/submissions', label: 'Submissions', icon: Upload },
 ];
 
 const studentLinks = [
     { path: '/my-workbook', label: 'My Workbook', icon: BookOpen },
+    { path: '/my-materials', label: 'Materials', icon: Files },
     { path: '/profile', label: 'My Profile', icon: User },
     // { path: '/submissions/my', label: 'My Submissions', icon: Upload },
 ];

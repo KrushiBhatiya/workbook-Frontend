@@ -12,8 +12,10 @@ import CreateWorkbook from './pages/CreateWorkbook';
 import ViewWorkbooks from './pages/ViewWorkbooks';
 import MyWorkbook from './pages/MyWorkbook';
 import Profile from './pages/Profile';
-import Submissions from './pages/Submissions'; // Faculty view
 import FacultyManagement from './pages/FacultyManagement';
+import Submissions from './pages/Submissions';
+import Materials from './pages/Materials';
+import StudentMaterials from './pages/StudentMaterials';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -37,6 +39,7 @@ function App() {
                 <Route path="/workbooks/create" element={<CreateWorkbook />} />
                 <Route path="/workbooks" element={<ViewWorkbooks />} />
                 <Route path="/submissions" element={<Submissions />} />
+                <Route path="/materials" element={<Materials />} />
                 <Route path="/faculty-management" element={<FacultyManagement />} />
               </Route>
 
@@ -47,6 +50,7 @@ function App() {
               {/* Student Routes */}
               <Route element={<ProtectedRoute allowedRoles={['student']} />}>
                 <Route path="/my-workbook" element={<MyWorkbook />} />
+                <Route path="/my-materials" element={<StudentMaterials />} />
                 <Route path="/profile" element={<Profile />} />
               </Route>
             </Route>
