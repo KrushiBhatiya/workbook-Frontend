@@ -34,17 +34,21 @@ const Dashboard = () => {
     ];
 
     return (
-        <div>
-            <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-8 pb-10">
+            <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h1>
+                <p className="text-gray-500 mt-1">Quick summary of your workbook system performance.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {statCards.map((card, index) => (
-                    <div key={index} className="bg-white rounded-lg shadow-md p-6 flex items-center">
-                        <div className={`p-4 rounded-full ${card.color} text-white mr-4`}>
-                            <card.icon className="w-8 h-8" />
+                    <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6 flex items-center hover:shadow-md transition-all group">
+                        <div className={`p-3.5 sm:p-4 rounded-xl ${card.color} text-white mr-4 shadow-lg shadow-${card.color.split('-')[1]}-100 transition-transform group-hover:scale-105`}>
+                            <card.icon className="w-6 h-6 sm:w-7 sm:h-7" />
                         </div>
                         <div>
-                            <p className="text-gray-500">{card.label}</p>
-                            <p className="text-2xl font-bold">{card.value}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">{card.label}</p>
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-0.5">{card.value.toLocaleString()}</p>
                         </div>
                     </div>
                 ))}

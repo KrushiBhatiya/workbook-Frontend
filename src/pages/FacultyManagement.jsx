@@ -75,12 +75,15 @@ const FacultyManagement = () => {
     const currentItems = faculties.slice(indexOfFirstItem, indexOfLastItem);
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Faculty Management</h1>
+        <div className="space-y-6 pb-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Faculty Management</h1>
+                    <p className="text-gray-500 mt-1">Manage instructor accounts and access permissions.</p>
+                </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700"
+                    className="w-full md:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 whitespace-nowrap"
                 >
                     <Plus className="w-5 h-5 mr-2" />
                     Add Faculty
@@ -108,23 +111,25 @@ const FacultyManagement = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                        <input type="text" name="name" required className="mt-1 block w-full px-3 py-2 border rounded-md" value={formData.name} onChange={handleChange} />
+                        <input type="text" name="name" required className="mt-1 block w-full px-4 py-2.5 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.name} onChange={handleChange} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Username</label>
-                        <input type="text" name="username" required className="mt-1 block w-full px-3 py-2 border rounded-md" value={formData.username} onChange={handleChange} />
+                        <input type="text" name="username" required className="mt-1 block w-full px-4 py-2.5 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.username} onChange={handleChange} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" name="email" required className="mt-1 block w-full px-3 py-2 border rounded-md" value={formData.email} onChange={handleChange} />
+                        <input type="email" name="email" required className="mt-1 block w-full px-4 py-2.5 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.email} onChange={handleChange} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" name="password" required className="mt-1 block w-full px-3 py-2 border rounded-md" value={formData.password} onChange={handleChange} />
+                        <input type="password" name="password" required className="mt-1 block w-full px-4 py-2.5 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.password} onChange={handleChange} />
                     </div>
-                    <div className="flex justify-end space-x-3 pt-4">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md">Cancel</button>
-                        <button type="submit" disabled={loading} className="px-4 py-2 text-white bg-indigo-600 rounded-md">Save</button>
+                    <div className="flex justify-end space-x-3 pt-6">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
+                        <button type="submit" disabled={loading} className="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl disabled:bg-indigo-400 transition-colors shadow-lg shadow-indigo-100 active:scale-95">
+                            {loading ? 'Saving...' : 'Save Faculty'}
+                        </button>
                     </div>
                 </form>
             </Modal>

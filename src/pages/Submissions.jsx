@@ -1,8 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
-import { Eye, Search, Calendar, X } from 'lucide-react';
+import { Eye, Search, Calendar, X, Clock, User, CheckCircle, AlertCircle } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 import Pagination from '../components/Pagination';
+import Modal from '../components/Modal';
 
 const Submissions = () => {
     const [stats, setStats] = useState({ submitted: [], notSubmitted: [] });
@@ -77,43 +78,48 @@ const Submissions = () => {
     const currentNotSubmitted = stats.notSubmitted.slice(notSubmittedFirstIndex, notSubmittedLastIndex);
 
     return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-6">Daily Submissions</h1>
+        <div className="space-y-6 pb-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Daily Submissions</h1>
+                    <p className="text-gray-500 mt-1">Monitor student progress and evaluate submissions.</p>
+                </div>
+            </div>
 
             {/* Filters */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border mb-6 flex flex-col md:flex-row gap-4 items-end md:items-center justify-between">
-                <div className="w-full md:w-auto flex flex-wrap gap-4 items-end">
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Date</label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                            <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400" />
                             <input
                                 type="date"
                                 value={date}
                                 onChange={(e) => setDate(e.target.value)}
-                                className="pl-10 pr-4 py-2 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                className="pl-11 pr-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl w-full focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm"
                             />
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Student Search</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Student Search</label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400" />
                             <input
                                 type="text"
                                 placeholder="Search by name..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 pr-4 py-2 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-64"
+                                className="pl-11 pr-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl w-full focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm"
                             />
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Faculty</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Faculty</label>
                         <select
                             value={selectedFaculty}
                             onChange={(e) => setSelectedFaculty(e.target.value)}
-                            className="pl-4 pr-10 py-2 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white h-[42px]"
+                            className="px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl w-full focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm appearance-none cursor-pointer"
                         >
                             <option value="">{user?.username || 'Select Faculty'}</option>
                             {faculties
@@ -132,18 +138,24 @@ const Submissions = () => {
             <div className="grid grid-cols-1 gap-6">
 
                 {/* Submitted Section */}
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div className="bg-green-50 px-6 py-4 border-b border-green-100 flex justify-between items-center">
-                        <h2 className="text-lg font-bold text-green-800">Submitted Work ({stats.submitted.length})</h2>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-emerald-50/50 px-6 py-4 border-b border-emerald-100 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle className="w-5 h-5 text-emerald-600" />
+                            <h2 className="text-lg font-bold text-emerald-900">Submitted Work</h2>
+                        </div>
+                        <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">
+                            {stats.submitted.length} Students
+                        </span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                            <thead className="bg-gray-50/50 text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest font-bold">
                                 <tr>
-                                    <th className="px-6 py-3 text-left">Student</th>
-                                    <th className="px-6 py-3 text-left">Batch</th>
-                                    <th className="px-6 py-3 text-center">Submissions</th>
-                                    <th className="px-6 py-3 text-center">Action</th>
+                                    <th className="px-6 py-4 text-left">Student</th>
+                                    <th className="px-6 py-4 text-left">Batch</th>
+                                    <th className="px-6 py-4 text-center">Questions</th>
+                                    <th className="px-6 py-4 text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
@@ -190,9 +202,15 @@ const Submissions = () => {
                 </div>
 
                 {/* Not Submitted Section */}
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex justify-between items-center">
-                        <h2 className="text-lg font-bold text-red-800">Not Submitted ({stats.notSubmitted.length})</h2>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-rose-50/50 px-6 py-4 border-b border-rose-100 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <AlertCircle className="w-5 h-5 text-rose-600" />
+                            <h2 className="text-lg font-bold text-rose-900">Not Submitted</h2>
+                        </div>
+                        <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold">
+                            {stats.notSubmitted.length} Students
+                        </span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
@@ -233,88 +251,101 @@ const Submissions = () => {
             </div>
 
             {/* Detail Modal */}
-            {selectedStudent && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <div className="p-6 border-b flex justify-between items-start bg-indigo-50">
-                            <div>
-                                <h2 className="text-xl font-bold text-indigo-900">{selectedStudent.student.name}'s Submissions</h2>
-                                <p className="text-indigo-600 text-sm mt-1">{new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            </div>
-                            <button
-                                onClick={() => setSelectedStudent(null)}
-                                className="text-gray-400 hover:text-gray-600 transition"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
+            <Modal
+                isOpen={!!selectedStudent}
+                onClose={() => setSelectedStudent(null)}
+                title={`${selectedStudent?.student?.name}'s Submissions`}
+            >
+                <div className="space-y-6">
+                    <div className="flex items-center gap-2 mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                        <Calendar className="w-4 h-4 text-indigo-600" />
+                        <span className="text-sm font-semibold text-indigo-900">
+                            {new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                    </div>
 
-                        <div className="p-6 overflow-y-auto flex-1">
-                            <div className="space-y-6">
-                                {selectedStudent.submissions.map((sub, idx) => (
-                                    <div key={sub._id} className="border border-gray-200 rounded-lg p-5 hover:border-indigo-200 transition-all bg-gray-50/50">
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded">Q{idx + 1}</span>
-                                                <h3 className="font-bold text-gray-900">{sub.questionId?.question || 'Unknown Question'}</h3>
-                                            </div>
-                                            <div className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">
-                                                {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
+                    <div className="space-y-4">
+                        {selectedStudent?.submissions.map((sub, idx) => (
+                            <div key={sub._id} className="border border-gray-100 rounded-2xl p-4 sm:p-5 hover:border-indigo-200 transition-all bg-white shadow-sm ring-1 ring-gray-100">
+                                <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold shrink-0">
+                                            Q{idx + 1}
                                         </div>
+                                        <h3 className="font-bold text-gray-900 leading-tight pt-1">
+                                            {sub.questionId?.question || 'Attached Image Question'}
+                                        </h3>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100 shrink-0">
+                                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                            {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                </div>
 
-                                        <div className="grid md:grid-cols-2 gap-6 mt-4">
-                                            <div>
-                                                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">My Answer</h4>
-                                                <div className="bg-white p-3 rounded border text-sm text-gray-800 whitespace-pre-wrap">
-                                                    {sub.answerText}
-                                                </div>
-                                            </div>
-
-                                            {sub.imageUrl && (
-                                                <div>
-                                                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Attachment</h4>
-                                                    <a
-                                                        href={sub.imageUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="block group relative rounded-lg overflow-hidden border"
-                                                    >
-                                                        <img
-                                                            src={sub.imageUrl}
-                                                            alt="Submission"
-                                                            className="w-full h-48 object-cover group-hover:opacity-90 transition"
-                                                        />
-                                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition">
-                                                            <span className="bg-white text-gray-900 text-xs font-bold px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition transform scale-90 group-hover:scale-100">
-                                                                View Full Size
-                                                            </span>
-                                                        </div>
-                                                    </a>
-                                                </div>
-                                            )}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-4">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Student Answer</h4>
                                         </div>
-
-                                        <div className="mt-3 flex gap-4 text-xs text-gray-500 pt-3 border-t">
-                                            <span><span className="font-semibold">Language:</span> {sub.languageId?.name}</span>
-                                            <span><span className="font-semibold">Topic:</span> {sub.topicId?.name}</span>
+                                        <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-50 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed min-h-[100px]">
+                                            {sub.answerText || <span className="text-gray-400 italic">No text provided</span>}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
 
-                        <div className="p-4 border-t bg-gray-50 text-right">
-                            <button
-                                onClick={() => setSelectedStudent(null)}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                            >
-                                Close
-                            </button>
-                        </div>
+                                    {sub.imageUrl && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Evidence</h4>
+                                            </div>
+                                            <a
+                                                href={sub.imageUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="block group relative rounded-xl overflow-hidden border border-gray-100 shadow-sm transition-all hover:ring-4 hover:ring-indigo-50"
+                                            >
+                                                <img
+                                                    src={sub.imageUrl}
+                                                    alt="Submission"
+                                                    className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-500"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                                                    <span className="bg-white/95 backdrop-blur-sm text-gray-900 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                                                        Inspect Evidence
+                                                    </span>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-5 flex flex-wrap gap-4 pt-4 border-t border-gray-50">
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                        <span className="font-bold text-gray-400">TRACK:</span>
+                                        <span className="px-2 py-0.5 bg-gray-100 rounded-md font-medium text-gray-600">{sub.languageId?.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                        <span className="font-bold text-gray-400">MODULE:</span>
+                                        <span className="px-2 py-0.5 bg-gray-100 rounded-md font-medium text-gray-600">{sub.topicId?.name}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-8 flex justify-end">
+                        <button
+                            onClick={() => setSelectedStudent(null)}
+                            className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-lg active:scale-95"
+                        >
+                            Done Reviewing
+                        </button>
                     </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 };

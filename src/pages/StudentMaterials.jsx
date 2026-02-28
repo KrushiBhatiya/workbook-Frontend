@@ -16,9 +16,20 @@ const StudentMaterials = () => {
     const [expandedMaterials, setExpandedMaterials] = useState({});
     const [carouselIndices, setCarouselIndices] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
+    const [itemsPerSlide, setItemsPerSlide] = useState(3);
 
     useEffect(() => {
         fetchMaterials();
+
+        const handleResize = () => {
+            if (window.innerWidth < 640) setItemsPerSlide(1);
+            else if (window.innerWidth < 1024) setItemsPerSlide(2);
+            else setItemsPerSlide(3);
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const fetchMaterials = async () => {
@@ -42,7 +53,7 @@ const StudentMaterials = () => {
     const nextSlide = (materialId, totalPdfs) => {
         setCarouselIndices(prev => {
             const currentIdx = prev[materialId] || 0;
-            const maxIdx = Math.ceil(totalPdfs / 3) - 1;
+            const maxIdx = Math.ceil(totalPdfs / itemsPerSlide) - 1;
             return { ...prev, [materialId]: (currentIdx + 1) > maxIdx ? 0 : currentIdx + 1 };
         });
     };
@@ -50,7 +61,7 @@ const StudentMaterials = () => {
     const prevSlide = (materialId, totalPdfs) => {
         setCarouselIndices(prev => {
             const currentIdx = prev[materialId] || 0;
-            const maxIdx = Math.ceil(totalPdfs / 3) - 1;
+            const maxIdx = Math.ceil(totalPdfs / itemsPerSlide) - 1;
             return { ...prev, [materialId]: (currentIdx - 1) < 0 ? maxIdx : currentIdx - 1 };
         });
     };
@@ -68,8 +79,8 @@ const StudentMaterials = () => {
     }
 
     return (
-        <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
-            <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-8 pb-10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
                         <BookOpen className="w-8 h-8 text-indigo-600" />
@@ -130,18 +141,18 @@ const StudentMaterials = () => {
                                 <div className="p-6 pt-0 border-t border-gray-100 bg-white">
                                     {material.pdfs && material.pdfs.length > 0 ? (
                                         <div className="relative mt-6">
-                                            {/* Carousel Controls - Always Enabled for Student Panel */}
-                                            {material.pdfs.length > 3 && (
+                                            {/* Carousel Controls */}
+                                            {material.pdfs.length > itemsPerSlide && (
                                                 <>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); prevSlide(material._id, material.pdfs.length); }}
-                                                        className="absolute left-0 top-1/2 -translate-y-1/2 z-20 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-all text-gray-400 hover:text-gray-600 shadow-md active:scale-95"
+                                                        className="absolute left-[-10px] sm:left-0 top-1/2 -translate-y-1/2 z-20 p-2 bg-white border border-gray-100 rounded-full shadow-lg hover:bg-gray-50 transition-all text-gray-400 hover:text-indigo-600 shadow-md active:scale-95"
                                                     >
                                                         <ChevronLeft className="w-5 h-5" />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); nextSlide(material._id, material.pdfs.length); }}
-                                                        className="absolute right-0 top-1/2 -translate-y-1/2 z-20 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-all text-gray-400 hover:text-gray-600 shadow-md active:scale-95"
+                                                        className="absolute right-[-10px] sm:right-0 top-1/2 -translate-y-1/2 z-20 p-2 bg-white border border-gray-100 rounded-full shadow-lg hover:bg-gray-50 transition-all text-gray-400 hover:text-indigo-600 shadow-md active:scale-95"
                                                     >
                                                         <ChevronRight className="w-5 h-5" />
                                                     </button>
@@ -149,15 +160,15 @@ const StudentMaterials = () => {
                                             )}
 
                                             {/* PDF Carousel Grid */}
-                                            <div className="relative overflow-hidden px-10">
+                                            <div className="relative overflow-hidden px-2 sm:px-10">
                                                 <div className="flex transition-transform duration-500 ease-in-out">
-                                                    {Array.from({ length: Math.ceil(material.pdfs.length / 3) }).map((_, slideIdx) => {
+                                                    {Array.from({ length: Math.ceil(material.pdfs.length / itemsPerSlide) }).map((_, slideIdx) => {
                                                         const currentSlide = carouselIndices[material._id] || 0;
                                                         if (slideIdx !== currentSlide) return null;
 
-                                                        const chunk = material.pdfs.slice(slideIdx * 3, slideIdx * 3 + 3);
+                                                        const chunk = material.pdfs.slice(slideIdx * itemsPerSlide, slideIdx * itemsPerSlide + itemsPerSlide);
                                                         return (
-                                                            <div key={slideIdx} className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 py-2 animate-in fade-in duration-300">
+                                                            <div key={slideIdx} className={`w-full grid grid-cols-1 sm:grid-cols-${Math.min(itemsPerSlide, 2)} lg:grid-cols-${itemsPerSlide} gap-4 py-2 animate-in fade-in duration-300`}>
                                                                 {chunk.map((pdf, idx) => (
                                                                     <div
                                                                         key={pdf.public_id || idx}
@@ -179,8 +190,8 @@ const StudentMaterials = () => {
                                                                                 <FileText className="w-10 h-10 text-red-500" />
                                                                             </div>
                                                                         </div>
-                                                                        <span className="text-[10px] font-medium text-gray-700 text-center line-clamp-1 px-1">
-                                                                            {pdf.name || 'Untitled PDF'}
+                                                                        <span className="text-[10px] sm:text-xs font-medium text-gray-700 text-center line-clamp-1 px-1">
+                                                                            {pdf.name || pdf.public_id.split('/').pop().split('_').slice(0, -1).join('_')}
                                                                         </span>
 
                                                                         {/* Hover Overlay - View only */}
@@ -197,9 +208,9 @@ const StudentMaterials = () => {
                                                                         </div>
                                                                     </div>
                                                                 ))}
-                                                                {/* Helper to maintain grid if fewer than 3 items */}
-                                                                {chunk.length < 3 && Array.from({ length: 3 - chunk.length }).map((_, i) => (
-                                                                    <div key={`empty-${i}`} className="hidden md:block opacity-0" />
+                                                                {/* Helper to maintain grid */}
+                                                                {chunk.length < itemsPerSlide && Array.from({ length: itemsPerSlide - chunk.length }).map((_, i) => (
+                                                                    <div key={`empty-${i}`} className="hidden sm:block opacity-0" />
                                                                 ))}
                                                             </div>
                                                         );
@@ -208,13 +219,14 @@ const StudentMaterials = () => {
                                             </div>
 
                                             {/* Carousel Pagination Dots */}
-                                            {material.pdfs.length > 3 && (
-                                                <div className="flex justify-center gap-1.5 mt-4">
-                                                    {Array.from({ length: Math.ceil(material.pdfs.length / 3) }).map((_, idx) => (
-                                                        <div
+                                            {material.pdfs.length > itemsPerSlide && (
+                                                <div className="flex justify-center gap-2 mt-4">
+                                                    {Array.from({ length: Math.ceil(material.pdfs.length / itemsPerSlide) }).map((_, idx) => (
+                                                        <button
                                                             key={idx}
-                                                            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${(carouselIndices[material._id] || 0) === idx ? 'bg-indigo-600 w-3' : 'bg-gray-300'}`}
-                                                        ></div>
+                                                            onClick={() => setCarouselIndices(prev => ({ ...prev, [material._id]: idx }))}
+                                                            className={`w-2 h-2 rounded-full transition-all duration-300 ${(carouselIndices[material._id] || 0) === idx ? 'bg-indigo-600 w-5' : 'bg-gray-300 hover:bg-gray-400'}`}
+                                                        ></button>
                                                     ))}
                                                 </div>
                                             )}

@@ -11,6 +11,7 @@ const Materials = () => {
     const [loading, setLoading] = useState(false);
     const [expandedMaterials, setExpandedMaterials] = useState({});
     const [carouselIndices, setCarouselIndices] = useState({});
+    const [itemsPerSlide, setItemsPerSlide] = useState(3);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -29,6 +30,16 @@ const Materials = () => {
     useEffect(() => {
         fetchMaterials();
         fetchCourses();
+
+        const handleResize = () => {
+            if (window.innerWidth < 640) setItemsPerSlide(1);
+            else if (window.innerWidth < 1024) setItemsPerSlide(2);
+            else setItemsPerSlide(3);
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const fetchMaterials = async () => {
@@ -116,7 +127,7 @@ const Materials = () => {
             alert('Material updated successfully');
         } catch (error) {
             console.error('Error updating material:', error);
-            alert('Error updating material');
+            alert(error.response?.data?.message || 'Error updating material');
         } finally {
             setLoading(false);
         }
@@ -148,7 +159,7 @@ const Materials = () => {
                 await api.delete(`/materials/${id}`);
                 fetchMaterials();
             } catch (error) {
-                alert('Error deleting material');
+                alert(error.response?.data?.message || 'Error deleting material');
             }
         }
     };
@@ -161,7 +172,7 @@ const Materials = () => {
                 setCarouselIndices(prev => ({ ...prev, [materialId]: 0 }));
             } catch (error) {
                 console.error('Error deleting PDF:', error);
-                alert('Error deleting PDF');
+                alert(error.response?.data?.message || 'Error deleting PDF');
             }
         }
     };
@@ -188,7 +199,7 @@ const Materials = () => {
             alert('PDF(s) uploaded successfully');
         } catch (error) {
             console.error('Error uploading PDF:', error);
-            alert('Error uploading PDF');
+            alert(error.response?.data?.message || 'Error uploading PDF');
         } finally {
             setLoading(false);
         }
@@ -224,12 +235,15 @@ const Materials = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Materials Management</h1>
+        <div className="space-y-6 pb-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Materials Management</h1>
+                    <p className="text-gray-500 mt-1">Upload and organize course PDFs for students.</p>
+                </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+                    className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
                 >
                     <Plus className="w-5 h-5 mr-2" />
                     Add Material
@@ -403,17 +417,16 @@ const Materials = () => {
                                         <p className="text-sm text-gray-500 italic text-center py-4">No PDFs in this material.</p>
                                     ) : (
                                         <div className="relative">
-                                            {/* PDF Carousel - Multi Item (3 per slide) */}
-                                            <div className="relative overflow-hidden px-10">
+                                            {/* PDF Carousel - Responsive Items */}
+                                            <div className="relative overflow-hidden px-2 sm:px-10">
                                                 <div className="flex transition-transform duration-500 ease-in-out">
-                                                    {/* Group PDFs into chunks of 3 */}
-                                                    {Array.from({ length: Math.ceil(material.pdfs.length / 3) }).map((_, slideIdx) => {
+                                                    {Array.from({ length: Math.ceil(material.pdfs.length / itemsPerSlide) }).map((_, slideIdx) => {
                                                         const currentSlide = carouselIndices[material._id] || 0;
                                                         if (slideIdx !== currentSlide) return null;
 
-                                                        const chunk = material.pdfs.slice(slideIdx * 3, slideIdx * 3 + 3);
+                                                        const chunk = material.pdfs.slice(slideIdx * itemsPerSlide, slideIdx * itemsPerSlide + itemsPerSlide);
                                                         return (
-                                                            <div key={slideIdx} className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 py-2 animate-in fade-in slide-in-from-right-4 duration-300">
+                                                            <div key={slideIdx} className={`w-full grid grid-cols-1 sm:grid-cols-${Math.min(itemsPerSlide, 2)} lg:grid-cols-${itemsPerSlide} gap-4 py-2 animate-in fade-in slide-in-from-right-4 duration-300`}>
                                                                 {chunk.map((pdf) => (
                                                                     <div key={pdf.public_id} className="relative group bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all h-48 flex flex-col items-center justify-center overflow-hidden">
                                                                         <div className="mb-3 w-full h-32 bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center border border-gray-100 group-hover:border-indigo-200 transition-colors">
@@ -432,26 +445,25 @@ const Materials = () => {
                                                                                 <FileText className="w-10 h-10 text-red-500" />
                                                                             </div>
                                                                         </div>
-                                                                        <span className="text-[10px] font-medium text-gray-700 text-center line-clamp-1 px-1">
+                                                                        <span className="text-[10px] sm:text-xs font-medium text-gray-700 text-center line-clamp-1 px-1">
                                                                             {pdf.name || pdf.public_id.split('/').pop().split('_').slice(0, -1).join('_')}
                                                                         </span>
 
-                                                                        {/* Hover Overlay - Restored View icon alongside Download and Delete */}
+                                                                        {/* Hover Overlay */}
                                                                         <div className="absolute inset-0 bg-indigo-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-3 backdrop-blur-[2px]">
                                                                             <a
                                                                                 href={pdf.url}
                                                                                 target="_blank"
                                                                                 rel="noopener noreferrer"
-                                                                                className="p-2 bg-white text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors shadow-lg active:scale-95"
+                                                                                className="p-2.5 bg-white text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors shadow-lg active:scale-95"
                                                                                 title="View PDF"
                                                                             >
                                                                                 <Eye size={20} />
                                                                             </a>
 
-
                                                                             <button
                                                                                 onClick={() => handleDeletePDF(material._id, pdf.public_id)}
-                                                                                className="p-2 bg-white text-rose-600 rounded-full hover:bg-rose-50 transition-colors shadow-lg active:scale-95"
+                                                                                className="p-2.5 bg-white text-rose-600 rounded-full hover:bg-rose-50 transition-colors shadow-lg active:scale-95"
                                                                                 title="Delete PDF"
                                                                             >
                                                                                 <Trash2 size={20} />
@@ -459,9 +471,9 @@ const Materials = () => {
                                                                         </div>
                                                                     </div>
                                                                 ))}
-                                                                {/* Fallback empty cards to maintain grid if < 3 items */}
-                                                                {chunk.length < 3 && Array.from({ length: 3 - chunk.length }).map((_, i) => (
-                                                                    <div key={`empty-${i}`} className="hidden md:block opacity-0" />
+                                                                {/* Fallback empty cards */}
+                                                                {chunk.length < itemsPerSlide && Array.from({ length: itemsPerSlide - chunk.length }).map((_, i) => (
+                                                                    <div key={`empty-${i}`} className="hidden sm:block opacity-0" />
                                                                 ))}
                                                             </div>
                                                         );
@@ -469,17 +481,17 @@ const Materials = () => {
                                                 </div>
 
                                                 {/* Navigation Arrows */}
-                                                {material.pdfs.length > 3 && (
+                                                {material.pdfs.length > itemsPerSlide && (
                                                     <>
                                                         <button
-                                                            onClick={() => prevSlide(material._id, Math.ceil(material.pdfs.length / 3))}
-                                                            className="absolute left-0 top-1/2 -translate-y-1/2 p-1.5 bg-white border border-gray-200 rounded-full shadow hover:bg-gray-50 transition-all text-gray-600 z-10"
+                                                            onClick={() => prevSlide(material._id, Math.ceil(material.pdfs.length / itemsPerSlide))}
+                                                            className="absolute left-[-5px] sm:left-0 top-1/2 -translate-y-1/2 p-2 bg-white/90 border border-gray-100 rounded-full shadow-lg hover:bg-white transition-all text-gray-600 z-10 hover:scale-110 active:scale-90 backdrop-blur-sm"
                                                         >
                                                             <ChevronLeft className="w-5 h-5" />
                                                         </button>
                                                         <button
-                                                            onClick={() => nextSlide(material._id, Math.ceil(material.pdfs.length / 3))}
-                                                            className="absolute right-0 top-1/2 -translate-y-1/2 p-1.5 bg-white border border-gray-200 rounded-full shadow hover:bg-gray-50 transition-all text-gray-600 z-10"
+                                                            onClick={() => nextSlide(material._id, Math.ceil(material.pdfs.length / itemsPerSlide))}
+                                                            className="absolute right-[-5px] sm:right-0 top-1/2 -translate-y-1/2 p-2 bg-white/90 border border-gray-100 rounded-full shadow-lg hover:bg-white transition-all text-gray-600 z-10 hover:scale-110 active:scale-90 backdrop-blur-sm"
                                                         >
                                                             <ChevronRight className="w-5 h-5" />
                                                         </button>
@@ -487,13 +499,13 @@ const Materials = () => {
                                                 )}
                                             </div>
 
-                                            {material.pdfs.length > 3 && (
-                                                <div className="flex justify-center space-x-1.5 mt-2">
-                                                    {Array.from({ length: Math.ceil(material.pdfs.length / 3) }).map((_, idx) => (
-                                                        <div
+                                            {material.pdfs.length > itemsPerSlide && (
+                                                <div className="flex justify-center space-x-2 mt-4">
+                                                    {Array.from({ length: Math.ceil(material.pdfs.length / itemsPerSlide) }).map((_, idx) => (
+                                                        <button
                                                             key={idx}
-                                                            className={`w-1.5 h-1.5 rounded-full transition-all ${(carouselIndices[material._id] || 0) === idx ? 'bg-indigo-600 w-3' : 'bg-gray-300'
-                                                                }`}
+                                                            onClick={() => setCarouselIndices(prev => ({ ...prev, [material._id]: idx }))}
+                                                            className={`w-2 h-2 rounded-full transition-all duration-300 ${(carouselIndices[material._id] || 0) === idx ? 'bg-indigo-600 w-5' : 'bg-gray-300 hover:bg-gray-400'}`}
                                                         />
                                                     ))}
                                                 </div>

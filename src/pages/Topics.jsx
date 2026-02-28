@@ -112,19 +112,34 @@ const Topics = () => {
     ];
 
     return (
-        <div>
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <h1 className="text-2xl font-bold">Topic Management</h1>
-                <div className="flex gap-4 w-full md:w-auto">
+        <div className="space-y-6 pb-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Topic Management</h1>
+                    <p className="text-gray-500 mt-1">Organize questions into logical learning units.</p>
+                </div>
+                <button
+                    onClick={() => openModal()}
+                    className="w-full md:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 whitespace-nowrap"
+                >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Topic
+                </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="relative flex-1">
                     <input
                         type="text"
                         placeholder="Search topics..."
-                        className="px-4 py-2 border rounded-lg w-full md:w-64"
+                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
                         value={topicQuery}
                         onChange={handleSearchChange}
                     />
+                </div>
+                <div className="relative w-full sm:w-64">
                     <select
-                        className="px-4 py-2 border rounded-lg w-full md:w-64"
+                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm appearance-none cursor-pointer"
                         value={filterLanguage}
                         onChange={handleLanguageFilterChange}
                     >
@@ -133,13 +148,6 @@ const Topics = () => {
                             <option key={lang._id} value={lang._id}>{lang.name}</option>
                         ))}
                     </select>
-                    <button
-                        onClick={() => openModal()}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 whitespace-nowrap"
-                    >
-                        <Plus className="w-5 h-5 mr-2" />
-                        Add Topic
-                    </button>
                 </div>
             </div>
 
