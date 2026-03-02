@@ -67,7 +67,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             `}
         >
             <div className="p-4 text-2xl font-bold border-b border-gray-700 flex items-center justify-between">
-                <span>Workbook App</span>
+                <span>CDMI TechX</span>
                 <button
                     onClick={onClose}
                     className="lg:hidden p-1 rounded-md hover:bg-gray-800 transition-colors"

@@ -28,7 +28,7 @@ const Login = () => {
         <div className="min-h-screen flex text-gray-900 bg-gray-50 p-4 sm:p-8">
             <div className="w-full max-w-md m-auto bg-white rounded-3xl shadow-xl shadow-indigo-100/50 p-8 sm:p-10 border border-gray-100">
                 <div className="text-center mb-10">
-                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">Welcome Back</h2>
+                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">CDMI TechX</h2>
                     <p className="text-gray-500">Log in to your account to continue.</p>
                 </div>
 
@@ -71,14 +71,14 @@ const Login = () => {
                     </div>
                 </form>
 
-                <div className="mt-8 text-center">
+                {/* <div className="mt-8 text-center">
                     <p className="text-sm text-gray-500">
                         Don't have an account?{' '}
                         <Link to="/register" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
                             Register now
                         </Link>
                     </p>
-                </div>
+                </div> */}
             </div>
         </div>
     );

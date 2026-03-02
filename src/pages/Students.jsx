@@ -400,7 +400,7 @@ const Students = () => {
                                 <p className="text-indigo-600 text-sm mt-1">Complete submission history — latest first</p>
                                 <div className="mt-3 flex items-center flex-wrap gap-2">
                                     <span className="text-sm font-semibold text-gray-700 bg-white px-2 py-1 rounded-md border shadow-sm">
-                                        Languages Access ({historyStudent?.allowedLanguageIds?.length || 0}):
+                                        Languages :- ({historyStudent?.allowedLanguageIds?.length || 0})
                                     </span>
                                     {historyStudent?.allowedLanguageIds?.map(lang => (
                                         <span key={lang._id} className="text-xs font-medium bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full border border-indigo-200">
