@@ -29,7 +29,7 @@ const Login = () => {
             <div className="w-full max-w-md m-auto bg-white rounded-3xl shadow-xl shadow-indigo-100/50 p-8 sm:p-10 border border-gray-100">
                 <div className="text-center mb-10">
                     <h2 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">CDMI TechX</h2>
-                    <p className="text-gray-500">Log in to your account to continue.</p>
+                    {/* <p className="text-gray-500">Log in to your account to continue.</p> */}
                 </div>
 
                 {error && (
