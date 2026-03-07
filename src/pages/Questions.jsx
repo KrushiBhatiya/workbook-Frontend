@@ -3,7 +3,7 @@ import api from '../utils/api';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { Plus } from 'lucide-react';
+import { Plus, X, Upload } from 'lucide-react';
 
 const Questions = () => {
     const [questions, setQuestions] = useState([]);
@@ -22,6 +22,18 @@ const Questions = () => {
     const [loading, setLoading] = useState(false);
     const [filterLanguage, setFilterLanguage] = useState('');
     const [filterTopic, setFilterTopic] = useState('');
+
+    // Inline Add State
+    const [isAdding, setIsAdding] = useState(false);
+    const [lastSelectedLanguage, setLastSelectedLanguage] = useState('');
+    const [lastSelectedTopic, setLastSelectedTopic] = useState('');
+    const [newQuestion, setNewQuestion] = useState({
+        question: '',
+        languageId: '',
+        topicId: '',
+        image: null
+    });
+    const [newQuestionImagePreview, setNewQuestionImagePreview] = useState(null);
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -49,6 +61,11 @@ const Questions = () => {
     const formTopics = topics.filter(t => {
         const tLangId = t.languageId?._id || t.languageId;
         return tLangId === formData.languageId;
+    });
+
+    const newFormTopics = topics.filter(t => {
+        const tLangId = t.languageId?._id || t.languageId;
+        return tLangId === newQuestion.languageId;
     });
 
     const handleSubmit = async (e) => {
@@ -89,6 +106,49 @@ const Questions = () => {
         }
     };
 
+    const handleInlineSubmit = async () => {
+        if (!newQuestion.question && !newQuestion.image) {
+            alert('Please provide either question text or an image.');
+            return;
+        }
+        if (!newQuestion.languageId || !newQuestion.topicId) {
+            alert('Please select a language and topic.');
+            return;
+        }
+
+        setLoading(true);
+
+        const data = new FormData();
+        data.append('question', newQuestion.question);
+        data.append('languageId', newQuestion.languageId);
+        data.append('topicId', newQuestion.topicId);
+        if (newQuestion.image) {
+            data.append('image', newQuestion.image);
+        }
+
+        try {
+            await api.post('/questions', data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            fetchData();
+
+            // Retain language/topic, clear question/image
+            setNewQuestion({
+                ...newQuestion,
+                question: '',
+                image: null
+            });
+            setNewQuestionImagePreview(null);
+
+        } catch (error) {
+            console.error('Error saving question:', error);
+            alert(error.response?.data?.message || 'Error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleDelete = async (question) => {
         if (window.confirm('Are you sure you want to delete this question?')) {
             try {
@@ -111,6 +171,22 @@ const Questions = () => {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleInlineFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB limit.');
+                return;
+            }
+            setNewQuestion({ ...newQuestion, image: file });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNewQuestionImagePreview(reader.result);
             };
             reader.readAsDataURL(file);
         }
@@ -200,7 +276,14 @@ const Questions = () => {
                     <p className="text-gray-500 mt-1">Create and manage your question bank.</p>
                 </div>
                 <button
-                    onClick={() => openModal()}
+                    onClick={() => {
+                        if (!isAdding) {
+                            setIsAdding(true);
+                            if (!newQuestion.languageId) {
+                                setNewQuestion({ ...newQuestion, languageId: lastSelectedLanguage, topicId: lastSelectedTopic });
+                            }
+                        }
+                    }}
                     className="w-full md:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 whitespace-nowrap"
                 >
                     <Plus className="w-5 h-5 mr-2" />
@@ -235,6 +318,140 @@ const Questions = () => {
                     </select>
                 </div>
             </div>
+
+            {isAdding && (
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Question</h3>
+                    <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="w-full sm:w-1/2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
+                                <select
+                                    required
+                                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm appearance-none cursor-pointer"
+                                    value={newQuestion.languageId}
+                                    onChange={(e) => {
+                                        setNewQuestion({ ...newQuestion, languageId: e.target.value, topicId: '' });
+                                        setLastSelectedLanguage(e.target.value);
+                                        setLastSelectedTopic('');
+                                    }}
+                                >
+                                    <option value="">Select Language</option>
+                                    {languages.map(lang => (
+                                        <option key={lang._id} value={lang._id}>{lang.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="w-full sm:w-1/2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+                                <select
+                                    required
+                                    disabled={!newQuestion.languageId}
+                                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm appearance-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400"
+                                    value={newQuestion.topicId}
+                                    onChange={(e) => {
+                                        setNewQuestion({ ...newQuestion, topicId: e.target.value });
+                                        setLastSelectedTopic(e.target.value);
+                                    }}
+                                >
+                                    <option value="">Select Topic</option>
+                                    {newFormTopics.map(topic => (
+                                        <option key={topic._id} value={topic._id}>{topic.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Question Text</label>
+                            <textarea
+                                rows="3"
+                                placeholder="Type question text here..."
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-y"
+                                value={newQuestion.question}
+                                onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
+                            ></textarea>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Question Image (Optional)</label>
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        id="inlineUpload"
+                                        accept="image/png, image/jpeg, image/jpg"
+                                        onChange={handleInlineFileChange}
+                                        className="sr-only"
+                                    />
+                                    <label
+                                        htmlFor="inlineUpload"
+                                        className="cursor-pointer inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm gap-2"
+                                    >
+                                        <Upload className="w-4 h-4 text-gray-500" />
+                                        <span>Choose Image</span>
+                                    </label>
+                                </div>
+                                {newQuestionImagePreview && (
+                                    <div className="relative inline-block group">
+                                        <img
+                                            src={newQuestionImagePreview}
+                                            alt="Preview"
+                                            className="h-12 w-12 object-cover rounded-md border shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => setFullScreenImage(newQuestionImagePreview)}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setNewQuestion({ ...newQuestion, image: null });
+                                                setNewQuestionImagePreview(null);
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm"
+                                            title="Remove image"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+                                {!newQuestionImagePreview && (
+                                    <span className="text-sm text-gray-500">No image chosen (Max 5MB)</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-100">
+                        <button
+                            onClick={() => {
+                                setIsAdding(false);
+                                setLastSelectedLanguage('');
+                                setLastSelectedTopic('');
+                                setNewQuestion({ question: '', languageId: '', topicId: '', image: null });
+                                setNewQuestionImagePreview(null);
+                            }}
+                            className="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleInlineSubmit}
+                            disabled={loading}
+                            className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-70 flex items-center"
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Saving...
+                                </>
+                            ) : (
+                                'Submit Question'
+                            )}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <DataTable
                 columns={columns}

@@ -3,7 +3,7 @@ import api from '../utils/api';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 const Topics = () => {
     const [topics, setTopics] = useState([]);
@@ -13,7 +13,12 @@ const Topics = () => {
     const [formData, setFormData] = useState({ name: '', languageId: '' });
     const [loading, setLoading] = useState(false);
     const [filterLanguage, setFilterLanguage] = useState('');
+    const [lastSelectedLanguage, setLastSelectedLanguage] = useState('');
     const [topicQuery, setTopicQuery] = useState('');
+
+    // Inline Multiple Add State
+    const [isAddingMultiple, setIsAddingMultiple] = useState(false);
+    const [newTopics, setNewTopics] = useState([{ name: '', languageId: '' }]);
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -54,6 +59,42 @@ const Topics = () => {
         }
     };
 
+    const handleBulkSubmit = async () => {
+        setLoading(true);
+        try {
+            const validTopics = newTopics.filter(t => t.name.trim() !== '' && t.languageId !== '');
+            if (validTopics.length === 0) {
+                alert('Please enter at least one topic name and select a language for each.');
+                setLoading(false);
+                return;
+            }
+
+            await Promise.all(
+                validTopics.map(t => api.post('/topics', { name: t.name.trim(), languageId: t.languageId }))
+            );
+
+            fetchData();
+            // setLastSelectedLanguage(''); <- removed
+            setNewTopics([{ name: '', languageId: lastSelectedLanguage }]);
+        } catch (error) {
+            console.error('Error saving topics:', error);
+            alert(error.response?.data?.message || 'Error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const removeNewTopicRow = (index) => {
+        const updated = [...newTopics];
+        updated.splice(index, 1);
+        setNewTopics(updated);
+        if (updated.length === 0) {
+            setIsAddingMultiple(false);
+            setLastSelectedLanguage('');
+            setNewTopics([{ name: '', languageId: '' }]);
+        }
+    };
+
     const handleDelete = async (topic) => {
         if (window.confirm('Are you sure you want to delete this topic?')) {
             try {
@@ -74,7 +115,7 @@ const Topics = () => {
             });
         } else {
             setCurrentTopic(null);
-            setFormData({ name: '', languageId: '' });
+            setFormData({ name: '', languageId: lastSelectedLanguage });
         }
         setIsModalOpen(true);
     };
@@ -119,7 +160,14 @@ const Topics = () => {
                     <p className="text-gray-500 mt-1">Organize questions into logical learning units.</p>
                 </div>
                 <button
-                    onClick={() => openModal()}
+                    onClick={() => {
+                        if (!isAddingMultiple) {
+                            setIsAddingMultiple(true);
+                            if (newTopics.length === 0) {
+                                setNewTopics([{ name: '', languageId: lastSelectedLanguage }]);
+                            }
+                        }
+                    }}
                     className="w-full md:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 whitespace-nowrap"
                 >
                     <Plus className="w-5 h-5 mr-2" />
@@ -151,6 +199,82 @@ const Topics = () => {
                 </div>
             </div>
 
+            {isAddingMultiple && (
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Topics</h3>
+                    <div className="space-y-4">
+                        {newTopics.map((topic, index) => (
+                            <div key={index} className="flex flex-col sm:flex-row items-center gap-3">
+                                <select
+                                    required
+                                    className="w-full sm:w-1/3 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm appearance-none cursor-pointer"
+                                    value={topic.languageId}
+                                    onChange={(e) => {
+                                        const updated = [...newTopics];
+                                        updated[index].languageId = e.target.value;
+                                        setNewTopics(updated);
+                                        setLastSelectedLanguage(e.target.value);
+                                    }}
+                                >
+                                    <option value="">Select Language</option>
+                                    {languages.map(lang => (
+                                        <option key={lang._id} value={lang._id}>{lang.name}</option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="text"
+                                    placeholder="Enter topic name..."
+                                    className="flex-1 w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                    value={topic.name}
+                                    onChange={(e) => {
+                                        const updated = [...newTopics];
+                                        updated[index].name = e.target.value;
+                                        setNewTopics(updated);
+                                    }}
+                                    autoFocus={index === newTopics.length - 1}
+                                />
+                                <button
+                                    onClick={() => removeNewTopicRow(index)}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                                    title="Remove row"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-100">
+                        <button
+                            onClick={() => {
+                                setIsAddingMultiple(false);
+                                setLastSelectedLanguage('');
+                                setNewTopics([{ name: '', languageId: '' }]);
+                            }}
+                            className="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleBulkSubmit}
+                            disabled={loading}
+                            className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-70 flex items-center"
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Saving...
+                                </>
+                            ) : (
+                                'Submit Topics'
+                            )}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <DataTable
                 columns={columns}
                 data={currentItems}
@@ -178,7 +302,10 @@ const Topics = () => {
                             required
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                             value={formData.languageId}
-                            onChange={(e) => setFormData({ ...formData, languageId: e.target.value })}
+                            onChange={(e) => {
+                                setFormData({ ...formData, languageId: e.target.value });
+                                setLastSelectedLanguage(e.target.value);
+                            }}
                         >
                             <option value="">Select Language</option>
                             {languages.map(lang => (
