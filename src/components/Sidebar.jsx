@@ -54,7 +54,12 @@ const Sidebar = ({ isOpen, onClose }) => {
     if (user.role === 'admin') {
         links = adminLinks;
     } else if (user.role === 'faculty') {
-        links = facultyLinks;
+        links = facultyLinks.filter(link => {
+            if (link.label === 'Faculty' && user.email !== 'krushi@gmail.com') {
+                return false;
+            }
+            return true;
+        });
     } else {
         links = studentLinks;
     }

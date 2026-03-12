@@ -446,6 +446,7 @@ const Materials = () => {
                                                         className="w-full border border-indigo-200 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
                                                         value={editName}
                                                         onChange={e => setEditName(e.target.value)}
+                                                        onKeyDown={(e) => e.stopPropagation()}
                                                         autoFocus
                                                     />
                                                 </div>
@@ -542,6 +543,7 @@ const Materials = () => {
                                                             placeholder="e.g. Chapter 1 Introduction"
                                                             value={uploadData.name}
                                                             onChange={e => setUploadData({ ...uploadData, name: e.target.value })}
+                                                            onKeyDown={(e) => e.stopPropagation()}
                                                         />
                                                     </div>
                                                     <div>
