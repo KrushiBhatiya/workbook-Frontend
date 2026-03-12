@@ -20,7 +20,7 @@ const Submissions = () => {
 
     // Faculty Filter
     const [faculties, setFaculties] = useState([]);
-    const [selectedFaculty, setSelectedFaculty] = useState('');
+    const [selectedFaculty, setSelectedFaculty] = useState(user?._id || '');
 
     // Pagination states
     const [submittedPage, setSubmittedPage] = useState(1);
@@ -38,6 +38,12 @@ const Submissions = () => {
         };
         fetchFaculties();
     }, []);
+
+    useEffect(() => {
+        if (user && !selectedFaculty) {
+            setSelectedFaculty(user._id);
+        }
+    }, [user]);
 
     const fetchSubmissions = async () => {
         setLoading(true);
@@ -121,14 +127,12 @@ const Submissions = () => {
                             onChange={(e) => setSelectedFaculty(e.target.value)}
                             className="px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl w-full focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm appearance-none cursor-pointer"
                         >
-                            <option value="">{user?.username || 'Select Faculty'}</option>
-                            {faculties
-                                .filter(f => f._id !== user?._id)
-                                .map((faculty) => (
-                                    <option key={faculty._id} value={faculty._id}>
-                                        {faculty.username}
-                                    </option>
-                                ))}
+                            <option value="all">All Faculties</option>
+                            {faculties.map((faculty) => (
+                                <option key={faculty._id} value={faculty._id}>
+                                    {faculty.username} {faculty._id === user?._id ? '(Me)' : ''}
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>
