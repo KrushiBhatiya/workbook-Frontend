@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { toast } from 'react-toastify';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
@@ -43,10 +44,11 @@ const Languages = () => {
                 await api.post('/languages', formData);
             }
             fetchLanguages();
+            toast.success(currentLanguage ? 'Language updated successfully!' : 'Language added successfully!');
             closeModal();
         } catch (error) {
             console.error('Error saving language:', error);
-            alert(error.response?.data?.message || 'Error occurred');
+            toast.error(error.response?.data?.message || 'Error occurred');
         } finally {
             setLoading(false);
         }
@@ -57,7 +59,7 @@ const Languages = () => {
         try {
             const validLanguages = newLanguages.filter(lang => lang.name.trim() !== '');
             if (validLanguages.length === 0) {
-                alert('Please enter at least one language name');
+                toast.warning('Please enter at least one language name');
                 setLoading(false);
                 return;
             }
@@ -68,9 +70,10 @@ const Languages = () => {
 
             fetchLanguages();
             setNewLanguages([{ name: '' }]);
+            toast.success('Languages added successfully!');
         } catch (error) {
             console.error('Error saving languages:', error);
-            alert(error.response?.data?.message || 'Error occurred');
+            toast.error(error.response?.data?.message || 'Error occurred');
         } finally {
             setLoading(false);
         }
@@ -91,8 +94,10 @@ const Languages = () => {
             try {
                 await api.delete(`/languages/${language._id}`);
                 fetchLanguages();
+                toast.success('Language deleted successfully!');
             } catch (error) {
                 console.error('Error deleting language:', error);
+                toast.error(error.response?.data?.message || 'Error deleting language');
             }
         }
     };

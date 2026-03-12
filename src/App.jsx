@@ -18,11 +18,14 @@ import Materials from './pages/Materials';
 import StudentMaterials from './pages/StudentMaterials';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   return (
     <Router>
       <AuthProvider>
+        <ToastContainer position="top-right" autoClose={3000} />
         <Routes>
           <Route path="/login" element={<Login />} />
 

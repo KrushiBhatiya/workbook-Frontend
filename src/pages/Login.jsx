@@ -1,6 +1,7 @@
 import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const Login = () => {
     const [formData, setFormData] = useState({ identifier: '', password: '' });
@@ -18,9 +19,12 @@ const Login = () => {
                 : { username: formData.identifier, password: formData.password };
 
             const user = await login(payload);
+            toast.success('Login successful!');
             navigate(user.role === 'faculty' ? '/dashboard' : '/my-workbook');
         } catch (err) {
-            setError(err.response?.data?.message || 'Login failed');
+            const errorMessage = err.response?.data?.message || 'Login failed';
+            setError(errorMessage);
+            toast.error(errorMessage);
         }
     };
 

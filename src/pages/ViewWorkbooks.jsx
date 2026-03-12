@@ -1,6 +1,66 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
-import { ChevronDown, ChevronRight, Book } from 'lucide-react';
+import { ChevronDown, ChevronRight, Book, GripVertical } from 'lucide-react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const SortableQuestionItem = ({ q, idx }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: q._id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 0,
+        position: 'relative'
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            className={`p-4 bg-white rounded-xl border border-gray-100 shadow-sm text-sm text-gray-700 flex items-start gap-4 hover:border-indigo-200 transition-colors cursor-grab active:cursor-grabbing ${isDragging ? 'bg-indigo-50 shadow-md border-indigo-300 ring-2 ring-indigo-500/20' : ''}`}
+        >
+            <span className="font-bold flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 text-xs shrink-0 mt-0.5 shadow-sm border border-indigo-100/50">
+                Q{idx + 1}
+            </span>
+            <div className="pt-0.5 leading-relaxed w-full">
+                <div className="mb-2 font-medium">
+                    {q.question || <span className="italic text-gray-400 font-normal">Image attached Question</span>}
+                </div>
+                {q.imageUrl && (
+                    <div className="mt-2 text-left">
+                        <div className="inline-block rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 p-1">
+                            <img src={q.imageUrl} alt="Question" className="max-h-48 rounded-md object-contain hover:opacity-95 transition-opacity" />
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 const ViewWorkbooks = () => {
     const [courses, setCourses] = useState([]);
@@ -9,11 +69,18 @@ const ViewWorkbooks = () => {
     const [topics, setTopics] = useState([]);
     const [questions, setQuestions] = useState([]);
 
-    // Accordion state: { [langId]: { [topicId]: boolean } }
+    // Accordion state: { [topicId]: boolean }
     const [expandedTopics, setExpandedTopics] = useState({});
 
     // Language selection state for the "Card view"
     const [selectedLanguageId, setSelectedLanguageId] = useState(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     useEffect(() => {
         const fetchCourses = async () => {
@@ -32,23 +99,23 @@ const ViewWorkbooks = () => {
     }, [selectedCourseId]);
 
     // When language is selected, fetch topics and questions
-    useEffect(() => {
+    const fetchData = useCallback(async () => {
         if (!selectedLanguageId) return;
-
-        const fetchData = async () => {
-            try {
-                const [topicsRes, questionsRes] = await Promise.all([
-                    api.get(`/topics?languageId=${selectedLanguageId}`),
-                    api.get(`/questions?languageId=${selectedLanguageId}`)
-                ]);
-                setTopics(topicsRes.data);
-                setQuestions(questionsRes.data);
-            } catch (error) {
-                console.error('Error fetching topics/questions:', error);
-            }
-        };
-        fetchData();
+        try {
+            const [topicsRes, questionsRes] = await Promise.all([
+                api.get(`/topics?languageId=${selectedLanguageId}`),
+                api.get(`/questions?languageId=${selectedLanguageId}`)
+            ]);
+            setTopics(topicsRes.data);
+            setQuestions(questionsRes.data);
+        } catch (error) {
+            console.error('Error fetching topics/questions:', error);
+        }
     }, [selectedLanguageId]);
+
+    useEffect(() => {
+        fetchData();
+    }, [selectedLanguageId, fetchData]);
 
     const toggleTopic = (topicId) => {
         setExpandedTopics(prev => ({
@@ -59,6 +126,53 @@ const ViewWorkbooks = () => {
 
     const getQuestionsByTopic = (topicId) => {
         return questions.filter(q => (q.topicId?._id || q.topicId) === topicId);
+    };
+
+    const handleDragEnd = async (event, topicId) => {
+        const { active, over } = event;
+
+        if (active.id !== over.id) {
+            const topicQuestions = getQuestionsByTopic(topicId);
+            const oldIndex = topicQuestions.findIndex((i) => i._id === active.id);
+            const newIndex = topicQuestions.findIndex((i) => i._id === over.id);
+
+            const newTopicQuestions = arrayMove(topicQuestions, oldIndex, newIndex);
+
+            // Update local state for all questions
+            const updatedQuestions = questions.map(q => {
+                const topicIdOfQ = (q.topicId?._id || q.topicId);
+                if (topicIdOfQ === topicId) {
+                    const idx = newTopicQuestions.findIndex(nq => nq._id === q._id);
+                    if (idx !== -1) {
+                        return newTopicQuestions[idx];
+                    }
+                }
+                return q;
+            });
+
+            // We need to re-sort the entire questions array to reflect the new move locally
+            // A better way is to rebuild the questions array by replacing the topic's slice
+            const otherQuestions = questions.filter(q => (q.topicId?._id || q.topicId) !== topicId);
+            const finalQuestions = [...otherQuestions, ...newTopicQuestions];
+            
+            // Re-sort finalQuestions by their current implicit order if necessary, but actually we just want to update the global list
+            // However, the backend needs the specific order.
+            
+            setQuestions(finalQuestions);
+
+            // Update order in background
+            const orderedIds = newTopicQuestions.map((item, index) => ({
+                _id: item._id,
+                order: index
+            }));
+
+            try {
+                await api.patch('/questions/reorder', { questions: orderedIds });
+            } catch (err) {
+                console.error('Failed to update order:', err);
+                fetchData(); // Restore if fails
+            }
+        }
     };
 
     return (
@@ -137,49 +251,49 @@ const ViewWorkbooks = () => {
                                         <p className="text-gray-400 font-medium">No topics found for this language track.</p>
                                     </div>
                                 ) : (
-                                    topics.map(topic => (
-                                        <div key={topic._id} className="group">
-                                            <button
-                                                onClick={() => toggleTopic(topic._id)}
-                                                className="w-full flex items-center justify-between p-5 hover:bg-indigo-50/50 transition-colors"
-                                            >
-                                                <span className="font-bold text-gray-800 text-left group-hover:text-indigo-700 transition-colors">{topic.name}</span>
-                                                <div className={`p-1.5 rounded-full bg-gray-100 transition-transform duration-300 ${expandedTopics[topic._id] ? 'rotate-180 bg-indigo-100 text-indigo-600' : 'text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
-                                                    <ChevronDown className="w-4 h-4" />
-                                                </div>
-                                            </button>
+                                    topics.map(topic => {
+                                        const topicQuestions = getQuestionsByTopic(topic._id);
+                                        return (
+                                            <div key={topic._id} className="group">
+                                                <button
+                                                    onClick={() => toggleTopic(topic._id)}
+                                                    className="w-full flex items-center justify-between p-5 hover:bg-indigo-50/50 transition-colors"
+                                                >
+                                                    <span className="font-bold text-gray-800 text-left group-hover:text-indigo-700 transition-colors">{topic.name}</span>
+                                                    <div className={`p-1.5 rounded-full bg-gray-100 transition-transform duration-300 ${expandedTopics[topic._id] ? 'rotate-180 bg-indigo-100 text-indigo-600' : 'text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
+                                                        <ChevronDown className="w-4 h-4" />
+                                                    </div>
+                                                </button>
 
-                                            <div className={`overflow-hidden transition-all duration-300 ${expandedTopics[topic._id] ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                                <div className="px-5 pb-5 pt-1 bg-gray-50/30">
-                                                    <div className="space-y-3 pl-4 border-l-2 border-indigo-200">
-                                                        {getQuestionsByTopic(topic._id).length === 0 ? (
-                                                            <p className="text-sm text-gray-400 italic py-2">No questions in this topic.</p>
-                                                        ) : (
-                                                            getQuestionsByTopic(topic._id).map((q, idx) => (
-                                                                <div key={q._id} className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm text-sm text-gray-700 flex items-start gap-3 hover:border-indigo-200 transition-colors">
-                                                                    <span className="font-bold flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 text-xs shrink-0 mt-1">
-                                                                        Q{idx + 1}
-                                                                    </span>
-                                                                    <div className="pt-1 leading-relaxed w-full">
-                                                                        <div className="mb-2">
-                                                                            {q.question || <span className="italic text-gray-400">Image attached Question</span>}
+                                                <div className={`overflow-hidden transition-all duration-300 ${expandedTopics[topic._id] ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                    <div className="px-5 pb-5 pt-1 bg-gray-50/30">
+                                                        <div className="space-y-3 pl-4 border-l-2 border-indigo-200">
+                                                            {topicQuestions.length === 0 ? (
+                                                                <p className="text-sm text-gray-400 italic py-2">No questions in this topic.</p>
+                                                            ) : (
+                                                                <DndContext
+                                                                    sensors={sensors}
+                                                                    collisionDetection={closestCenter}
+                                                                    onDragEnd={(e) => handleDragEnd(e, topic._id)}
+                                                                >
+                                                                    <SortableContext
+                                                                        items={topicQuestions.map(q => q._id)}
+                                                                        strategy={verticalListSortingStrategy}
+                                                                    >
+                                                                        <div className="space-y-3">
+                                                                            {topicQuestions.map((q, idx) => (
+                                                                                <SortableQuestionItem key={q._id} q={q} idx={idx} />
+                                                                            ))}
                                                                         </div>
-                                                                        {q.imageUrl && (
-                                                                            <div className="mt-2">
-                                                                                <a href={q.imageUrl} target="_blank" rel="noopener noreferrer">
-                                                                                    <img src={q.imageUrl} alt="Question" className="max-h-48 rounded-lg object-contain border border-gray-200 hover:opacity-90 transition-opacity cursor-pointer shadow-sm" />
-                                                                                </a>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            ))
-                                                        )}
+                                                                    </SortableContext>
+                                                                </DndContext>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         </div>

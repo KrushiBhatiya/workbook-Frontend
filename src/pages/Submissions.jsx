@@ -293,17 +293,19 @@ const Submissions = () => {
                                         </div>
                                     </div>
 
-                                    {/* Content — full width answer, side-by-side only when image exists */}
-                                    <div className={`grid gap-5 ${sub.imageUrl ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-1.5">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Student Answer</h4>
+                                    {/* Content — dynamic grid based on presence of both text and image */}
+                                    <div className={`grid gap-5 ${(sub.answerText && sub.imageUrl) ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                                        {sub.answerText && (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Student Answer</h4>
+                                                </div>
+                                                <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed min-h-[100px]">
+                                                    {sub.answerText}
+                                                </div>
                                             </div>
-                                            <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed min-h-[100px]">
-                                                {sub.answerText || <span className="text-gray-400 italic">No text provided</span>}
-                                            </div>
-                                        </div>
+                                        )}
 
                                         {sub.imageUrl && (
                                             <div className="space-y-2">
@@ -320,7 +322,7 @@ const Submissions = () => {
                                                     <img
                                                         src={sub.imageUrl}
                                                         alt="Submission"
-                                                        className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500"
+                                                        className="w-full h-auto max-h-[500px] object-contain bg-gray-50 group-hover:scale-105 transition-transform duration-500"
                                                     />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
                                                         <span className="bg-white/95 backdrop-blur-sm text-gray-900 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">

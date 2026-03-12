@@ -373,8 +373,27 @@ const MyWorkbook = () => {
                                                                     </div>
 
                                                                     {existingSubmissions[q._id] && (
-                                                                        <div className="mt-3 text-sm bg-green-50 p-3 rounded border border-green-100 text-gray-700">
-                                                                            <strong>Your Answer:</strong> {existingSubmissions[q._id].answerText}
+                                                                        <div className="mt-3 text-sm bg-green-50 p-3 rounded border border-green-100 text-gray-700 space-y-3">
+                                                                            {existingSubmissions[q._id].answerText && (
+                                                                                <div>
+                                                                                    <strong>Your Answer:</strong>
+                                                                                    <div className="mt-1 whitespace-pre-wrap">
+                                                                                        {existingSubmissions[q._id].answerText}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                            {existingSubmissions[q._id].imageUrl && (
+                                                                                <div>
+                                                                                    <strong>Submitted Image:</strong>
+                                                                                    <div className="mt-2">
+                                                                                        <img
+                                                                                            src={existingSubmissions[q._id].imageUrl}
+                                                                                            alt="Your submission"
+                                                                                            className="max-h-48 rounded border shadow-sm object-contain bg-white"
+                                                                                        />
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     )}
                                                                 </div>

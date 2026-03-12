@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { toast } from 'react-toastify';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
@@ -50,10 +51,11 @@ const Topics = () => {
                 await api.post('/topics', formData);
             }
             fetchData();
+            toast.success(currentTopic ? 'Topic updated successfully!' : 'Topic added successfully!');
             closeModal();
         } catch (error) {
             console.error('Error saving topic:', error);
-            alert(error.response?.data?.message || 'Error occurred');
+            toast.error(error.response?.data?.message || 'Error occurred');
         } finally {
             setLoading(false);
         }
@@ -64,7 +66,7 @@ const Topics = () => {
         try {
             const validTopics = newTopics.filter(t => t.name.trim() !== '' && t.languageId !== '');
             if (validTopics.length === 0) {
-                alert('Please enter at least one topic name and select a language for each.');
+                toast.warning('Please enter at least one topic name and select a language for each.');
                 setLoading(false);
                 return;
             }
@@ -76,9 +78,10 @@ const Topics = () => {
             fetchData();
             // setLastSelectedLanguage(''); <- removed
             setNewTopics([{ name: '', languageId: lastSelectedLanguage }]);
+            toast.success('Topics added successfully!');
         } catch (error) {
             console.error('Error saving topics:', error);
-            alert(error.response?.data?.message || 'Error occurred');
+            toast.error(error.response?.data?.message || 'Error occurred');
         } finally {
             setLoading(false);
         }
@@ -100,8 +103,10 @@ const Topics = () => {
             try {
                 await api.delete(`/topics/${topic._id}`);
                 fetchData();
+                toast.success('Topic deleted successfully!');
             } catch (error) {
                 console.error('Error deleting topic:', error);
+                toast.error(error.response?.data?.message || 'Error deleting topic');
             }
         }
     };

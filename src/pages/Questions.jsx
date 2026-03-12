@@ -1,9 +1,85 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { toast } from 'react-toastify';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { Plus, X, Upload } from 'lucide-react';
+import { Plus, X, Upload, GripVertical, Edit, Trash2 } from 'lucide-react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const SortableRow = ({ row, columns, onEdit, onDelete, actionLabel }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: row._id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 20 : 0,
+        position: 'relative'
+    };
+
+    return (
+        <tr
+            ref={setNodeRef}
+            style={style}
+            className={`hover:bg-indigo-50/30 transition-colors group ${isDragging ? 'bg-indigo-100 shadow-lg' : ''}`}
+        >
+            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-400 cursor-grab active:cursor-grabbing" {...attributes} {...listeners}>
+                <GripVertical className="w-4 h-4" />
+            </td>
+            {columns.map((col, colIndex) => (
+                <td key={colIndex} className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {col.render ? col.render(row) : row[col.accessor]}
+                </td>
+            ))}
+            {(onEdit || onDelete) && (
+                <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end space-x-2">
+                        {onEdit && (
+                            <button
+                                onClick={() => onEdit(row)}
+                                className="p-1.5 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-100 rounded-md transition-all"
+                                title="Edit"
+                            >
+                                <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </button>
+                        )}
+                        {onDelete && (
+                            <button
+                                onClick={() => onDelete(row)}
+                                className="p-1.5 text-rose-600 hover:text-rose-900 hover:bg-rose-100 rounded-md transition-all"
+                                title="Delete"
+                            >
+                                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </button>
+                        )}
+                    </div>
+                </td>
+            )}
+        </tr>
+    );
+};
 
 const Questions = () => {
     const [questions, setQuestions] = useState([]);
@@ -37,6 +113,39 @@ const Questions = () => {
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = async (event) => {
+        const { active, over } = event;
+
+        if (active.id !== over.id) {
+            setQuestions((items) => {
+                const oldIndex = items.findIndex((i) => i._id === active.id);
+                const newIndex = items.findIndex((i) => i._id === over.id);
+                const newItems = arrayMove(items, oldIndex, newIndex);
+
+                // Update order in background
+                const orderedIds = newItems.map((item, index) => ({
+                    _id: item._id,
+                    order: index
+                }));
+
+                api.patch('/questions/reorder', { questions: orderedIds }).catch(err => {
+                    console.error('Failed to update order:', err);
+                    toast.error('Failed to update question order');
+                    fetchData(); // Restore if fails
+                });
+
+                return newItems;
+            });
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -72,7 +181,7 @@ const Questions = () => {
         e.preventDefault();
 
         if (!formData.question && !formData.image && (!currentQuestion || !currentQuestion.imageUrl)) {
-            alert('Please provide either question text or an image.');
+            toast.warning('Please provide either question text or an image.');
             return;
         }
 
@@ -97,10 +206,11 @@ const Questions = () => {
                 });
             }
             fetchData();
+            toast.success(currentQuestion ? 'Question updated successfully!' : 'Question added successfully!');
             closeModal();
         } catch (error) {
             console.error('Error saving question:', error);
-            alert(error.response?.data?.message || 'Error occurred');
+            toast.error(error.response?.data?.message || 'Error occurred');
         } finally {
             setLoading(false);
         }
@@ -108,11 +218,11 @@ const Questions = () => {
 
     const handleInlineSubmit = async () => {
         if (!newQuestion.question && !newQuestion.image) {
-            alert('Please provide either question text or an image.');
+            toast.warning('Please provide either question text or an image.');
             return;
         }
         if (!newQuestion.languageId || !newQuestion.topicId) {
-            alert('Please select a language and topic.');
+            toast.warning('Please select a language and topic.');
             return;
         }
 
@@ -132,6 +242,7 @@ const Questions = () => {
             });
 
             fetchData();
+            toast.success('Question added successfully!');
 
             // Retain language/topic, clear question/image
             setNewQuestion({
@@ -143,7 +254,7 @@ const Questions = () => {
 
         } catch (error) {
             console.error('Error saving question:', error);
-            alert(error.response?.data?.message || 'Error occurred');
+            toast.error(error.response?.data?.message || 'Error occurred');
         } finally {
             setLoading(false);
         }
@@ -154,8 +265,10 @@ const Questions = () => {
             try {
                 await api.delete(`/questions/${question._id}`);
                 fetchData();
+                toast.success('Question deleted successfully!');
             } catch (error) {
                 console.error('Error deleting question:', error);
+                toast.error(error.response?.data?.message || 'Error deleting question');
             }
         }
     };
@@ -164,7 +277,7 @@ const Questions = () => {
         const file = e.target.files[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
-                alert('File size exceeds 5MB limit.');
+                toast.warning('File size exceeds 5MB limit.');
                 return;
             }
             setFormData({ ...formData, image: file });
@@ -180,7 +293,7 @@ const Questions = () => {
         const file = e.target.files[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
-                alert('File size exceeds 5MB limit.');
+                toast.warning('File size exceeds 5MB limit.');
                 return;
             }
             setNewQuestion({ ...newQuestion, image: file });
@@ -453,12 +566,59 @@ const Questions = () => {
                 </div>
             )}
 
-            <DataTable
-                columns={columns}
-                data={currentItems}
-                onEdit={openModal}
-                onDelete={handleDelete}
-            />
+            {filterTopic ? (
+                <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-100 custom-scrollbar">
+                    <table className="min-w-full divide-y divide-gray-100">
+                        <thead className="bg-gray-50/50">
+                            <tr>
+                                <th className="px-4 sm:px-6 py-4 w-10"></th>
+                                {columns.map((col, index) => (
+                                    <th key={index} className="px-4 sm:px-6 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                        {col.header}
+                                    </th>
+                                ))}
+                                <th className="px-4 sm:px-6 py-4 text-right text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
+                            </tr>
+                        </thead>
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={currentItems.map(i => i._id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {currentItems.map((row) => (
+                                        <SortableRow
+                                            key={row._id}
+                                            row={row}
+                                            columns={columns}
+                                            onEdit={openModal}
+                                            onDelete={handleDelete}
+                                        />
+                                    ))}
+                                    {currentItems.length === 0 && (
+                                        <tr>
+                                            <td colSpan={columns.length + 2} className="px-4 sm:px-6 py-8 text-center text-gray-400 italic">
+                                                No data available
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </SortableContext>
+                        </DndContext>
+                    </table>
+                </div>
+            ) : (
+                <DataTable
+                    columns={columns}
+                    data={currentItems}
+                    onEdit={openModal}
+                    onDelete={handleDelete}
+                />
+            )}
 
             <Pagination
                 totalItems={filteredQuestions.length}

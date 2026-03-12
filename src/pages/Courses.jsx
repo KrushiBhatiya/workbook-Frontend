@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { toast } from 'react-toastify';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
@@ -50,10 +51,11 @@ const Courses = () => {
                 await api.post('/courses', formData);
             }
             fetchCourses();
+            toast.success(currentCourse ? 'Course updated successfully!' : 'Course added successfully!');
             closeModal();
         } catch (error) {
             console.error('Error saving course:', error);
-            alert(error.response?.data?.message || 'Error occurred');
+            toast.error(error.response?.data?.message || 'Error occurred');
         } finally {
             setLoading(false);
         }
@@ -64,8 +66,10 @@ const Courses = () => {
             try {
                 await api.delete(`/courses/${course._id}`);
                 fetchCourses();
+                toast.success('Course deleted successfully!');
             } catch (error) {
                 console.error('Error deleting course:', error);
+                toast.error(error.response?.data?.message || 'Error deleting course');
             }
         }
     };
