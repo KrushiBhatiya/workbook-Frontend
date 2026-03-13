@@ -5,14 +5,26 @@ import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { Plus, Eye } from 'lucide-react';
 
+// Helper: get the logged-in user's data from localStorage
+const getLoggedInUser = () => {
+    try {
+        const user = localStorage.getItem('user');
+        return user ? JSON.parse(user) : null;
+    } catch {
+        return null;
+    }
+};
+
 const Students = () => {
     const [students, setStudents] = useState([]);
     const [courses, setCourses] = useState([]);
     const [languages, setLanguages] = useState([]);
+    const [faculties, setFaculties] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState(null);
     const [loading, setLoading] = useState(false);
     const [filterName, setFilterName] = useState('');
+    const [filterFacultyId, setFilterFacultyId] = useState('');
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -31,23 +43,31 @@ const Students = () => {
         contact: '',
         courseId: '',
         allowedLanguageIds: []
+        // facultyId is NOT in initialFormState intentionally (only shown in edit modal)
     };
 
     const [formData, setFormData] = useState(initialFormState);
 
-    const fetchData = async () => {
-        // Fetch Students
+    const fetchStudents = async (facultyId) => {
         try {
-            const { data } = await api.get('/students');
+            const params = facultyId ? `?facultyId=${facultyId}` : '';
+            const { data } = await api.get(`/students${params}`);
             setStudents(data);
         } catch (error) {
             console.error('Error fetching students:', error);
         }
+    };
+
+    const fetchData = async () => {
+        // Set default faculty filter to logged-in user
+        const loggedInUser = getLoggedInUser();
+        const defaultFacultyId = loggedInUser?._id || '';
+        setFilterFacultyId(defaultFacultyId);
+        fetchStudents(defaultFacultyId);
 
         // Fetch Courses
         try {
             const { data } = await api.get('/courses');
-            console.log('Fetched Courses:', data);
             setCourses(data);
         } catch (error) {
             console.error('Error fetching courses:', error);
@@ -60,11 +80,26 @@ const Students = () => {
         } catch (error) {
             console.error('Error fetching languages:', error);
         }
+
+        // Fetch Faculties
+        try {
+            const { data } = await api.get('/faculty');
+            setFaculties(data);
+        } catch (error) {
+            console.error('Error fetching faculties:', error);
+        }
     };
 
     useEffect(() => {
         fetchData();
     }, []);
+
+    const handleFacultyFilterChange = (e) => {
+        const fid = e.target.value;
+        setFilterFacultyId(fid);
+        setCurrentPage(1);
+        fetchStudents(fid);
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -99,7 +134,7 @@ const Students = () => {
             } else {
                 await api.post('/students', formData);
             }
-            fetchData();
+            fetchStudents(filterFacultyId);
             closeModal();
         } catch (error) {
             console.error('Error saving student:', error);
@@ -113,7 +148,7 @@ const Students = () => {
         if (window.confirm('Are you sure you want to delete this student?')) {
             try {
                 await api.delete(`/students/${student._id}`);
-                fetchData();
+                fetchStudents(filterFacultyId);
             } catch (error) {
                 console.error('Error deleting student:', error);
             }
@@ -130,7 +165,8 @@ const Students = () => {
                 batchTime: student.batchTime,
                 contact: student.contact,
                 courseId: student.courseId?._id || student.courseId,
-                allowedLanguageIds: student.allowedLanguageIds.map(l => l._id || l)
+                allowedLanguageIds: student.allowedLanguageIds.map(l => l._id || l),
+                facultyId: student.facultyId?._id || student.facultyId || ''
             });
         } else {
             setCurrentStudent(null);
@@ -145,7 +181,7 @@ const Students = () => {
         setFormData(initialFormState);
     };
 
-    // Filter students
+    // Filter students by name (client-side, across all loaded students)
     const filteredStudents = students.filter(student =>
         student.name.toLowerCase().includes(filterName.toLowerCase())
     );
@@ -155,9 +191,17 @@ const Students = () => {
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
 
-    const handleFilterNameChange = (e) => {
-        setFilterName(e.target.value);
+    const handleFilterNameChange = async (e) => {
+        const name = e.target.value;
+        setFilterName(name);
         setCurrentPage(1);
+        // When searching by name, load ALL students so search spans all faculties
+        if (name.trim()) {
+            await fetchStudents(''); // empty = all students
+        } else {
+            // Restore current faculty filter when search is cleared
+            await fetchStudents(filterFacultyId);
+        }
     };
 
     const openHistoryModal = async (student) => {
@@ -214,7 +258,21 @@ const Students = () => {
                     <p className="text-gray-500 mt-1">Manage student accounts and access.</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                    <div className="relative w-full sm:w-64">
+                    {/* Faculty Filter */}
+                    <div className="relative w-full sm:w-48">
+                        <select
+                            className="px-4 py-2.5 border border-gray-200 rounded-xl w-full focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all bg-white text-gray-700"
+                            value={filterFacultyId}
+                            onChange={handleFacultyFilterChange}
+                        >
+                            <option value="">All Faculties</option>
+                            {faculties.map(f => (
+                                <option key={f._id} value={f._id}>{f.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {/* Name Filter */}
+                    <div className="relative w-full sm:w-56">
                         <input
                             type="text"
                             placeholder="Filter by Name..."
@@ -369,6 +427,25 @@ const Students = () => {
                             )}
                         </div>
                     </div>
+
+                    {/* Faculty select — only shown in Edit mode */}
+                    {currentStudent && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Assign Faculty</label>
+                            <select
+                                name="facultyId"
+                                required
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                value={formData.facultyId || ''}
+                                onChange={handleChange}
+                            >
+                                <option value="">Select Faculty</option>
+                                {faculties.map(f => (
+                                    <option key={f._id} value={f._id}>{f.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="flex justify-end space-x-3 pt-4 border-t">
                         <button

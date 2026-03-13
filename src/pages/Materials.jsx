@@ -38,11 +38,11 @@ const SortableMaterialItem = ({ material, children }) => {
     };
 
     return (
-        <div 
-            ref={setNodeRef} 
-            style={style} 
-            {...attributes} 
-            {...listeners} 
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
             className={`bg-white rounded-lg shadow overflow-hidden border border-gray-100 cursor-grab active:cursor-grabbing ${isDragging ? 'z-50 shadow-xl border-indigo-300 ring-2 ring-indigo-500/20' : ''}`}
         >
             <div className="flex-1">
@@ -293,7 +293,7 @@ const Materials = () => {
             await api.post(`/materials/${materialId}/append`, data);
             fetchMaterials();
             setUploadData({ name: '', pdfs: [] });
-            setShowUploadForm(prev => ({ ...prev, [materialId]: false }));
+            // Form stays open — user can upload more without clicking the button again
             alert('PDF(s) uploaded successfully');
         } catch (error) {
             console.error('Error uploading PDF:', error);
@@ -499,7 +499,8 @@ const Materials = () => {
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setShowUploadForm(prev => ({ ...prev, [material._id]: !prev[material._id] }));
+                                                // Always open the form (never toggle it closed)
+                                                setShowUploadForm(prev => ({ ...prev, [material._id]: true }));
                                                 if (!expandedMaterials[material._id]) {
                                                     toggleMaterial(material._id);
                                                 }
@@ -584,7 +585,7 @@ const Materials = () => {
                                             <p className="text-sm text-gray-500 italic text-center py-4">No PDFs in this material.</p>
                                         ) : (
                                             <div className="relative">
-                                                {/* PDF Carousel - Draggable Items */}
+                                                {/* PDF Carousel - ALL slides always in DOM for cross-slide drag support */}
                                                 <div className="relative overflow-hidden px-2 sm:px-10">
                                                     <DndContext
                                                         sensors={sensors}
@@ -595,25 +596,27 @@ const Materials = () => {
                                                             items={material.pdfs.map(p => p.public_id)}
                                                             strategy={verticalListSortingStrategy}
                                                         >
-                                                            <div className="flex transition-transform duration-500 ease-in-out">
-                                                                {Array.from({ length: Math.ceil(material.pdfs.length / itemsPerSlide) }).map((_, slideIdx) => {
-                                                                    const currentSlide = carouselIndices[material._id] || 0;
-                                                                    if (slideIdx !== currentSlide) return null;
-
-                                                                    const chunk = material.pdfs.slice(slideIdx * itemsPerSlide, slideIdx * itemsPerSlide + itemsPerSlide);
-                                                                    return (
-                                                                        <div key={slideIdx} className={`w-full grid grid-cols-1 sm:grid-cols-${Math.min(itemsPerSlide, 2)} lg:grid-cols-${itemsPerSlide} gap-4 py-2 animate-in fade-in slide-in-from-right-4 duration-300`}>
-                                                                            {chunk.map((pdf) => (
-                                                                                <SortablePDFItem key={pdf.public_id} pdf={pdf} materialId={material._id} onDelete={handleDeletePDF} itemsPerSlide={itemsPerSlide} />
+                                                            {/* Render ALL slides but only show the current one */}
+                                                            {Array.from({ length: Math.ceil(material.pdfs.length / itemsPerSlide) }).map((_, slideIdx) => {
+                                                                const currentSlide = carouselIndices[material._id] || 0;
+                                                                const isVisible = slideIdx === currentSlide;
+                                                                const chunk = material.pdfs.slice(slideIdx * itemsPerSlide, slideIdx * itemsPerSlide + itemsPerSlide);
+                                                                return (
+                                                                    <div
+                                                                        key={slideIdx}
+                                                                        style={{ display: isVisible ? undefined : 'none' }}
+                                                                        className={`w-full grid grid-cols-1 sm:grid-cols-${Math.min(itemsPerSlide, 2)} lg:grid-cols-${itemsPerSlide} gap-4 py-2`}
+                                                                    >
+                                                                        {chunk.map((pdf) => (
+                                                                            <SortablePDFItem key={pdf.public_id} pdf={pdf} materialId={material._id} onDelete={handleDeletePDF} itemsPerSlide={itemsPerSlide} />
                                                                         ))}
-                                                                            {/* Fallback empty cards */}
-                                                                            {chunk.length < itemsPerSlide && Array.from({ length: itemsPerSlide - chunk.length }).map((_, i) => (
-                                                                                <div key={`empty-${i}`} className="hidden sm:block opacity-0" />
-                                                                            ))}
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
+                                                                        {/* Fallback empty cards */}
+                                                                        {chunk.length < itemsPerSlide && Array.from({ length: itemsPerSlide - chunk.length }).map((_, i) => (
+                                                                            <div key={`empty-${i}`} className="hidden sm:block opacity-0" />
+                                                                        ))}
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </SortableContext>
                                                     </DndContext>
 
