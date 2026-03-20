@@ -228,7 +228,7 @@ const Submissions = () => {
                                                     {item.count} Questions
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="px-6 py-4 text-center" style={{ display: 'flex', justifyContent: 'center' }}>
                                                 <button
                                                     onClick={() => handleViewDetails(item)}
                                                     className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 p-2 rounded-full hover:bg-indigo-100 transition"

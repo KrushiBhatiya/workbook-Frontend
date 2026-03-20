@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import GoogleStudentRegistration from './pages/GoogleStudentRegistration';
+import WaitingApproval from './pages/WaitingApproval';
 import Dashboard from './pages/Dashboard';
 import Courses from './pages/Courses';
 import Students from './pages/Students';
@@ -16,18 +18,31 @@ import FacultyManagement from './pages/FacultyManagement';
 import Submissions from './pages/Submissions';
 import Materials from './pages/Materials';
 import StudentMaterials from './pages/StudentMaterials';
+import StudentReport from './pages/StudentReport';
+import FacultyReport from './pages/FacultyReport';
+import CPCSelection from './pages/CPCSelection';
+import CPCTable from './pages/CPCTable';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// Firebase and old Auth provider cleanup
+// import { GoogleOAuthProvider } from '@react-oauth/google';
+
+
 function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1013753760431-297g90f9p16l9o2tnsunvck81edg5268.apps.googleusercontent.com'; // Fallback for safety
+
   return (
     <Router>
       <AuthProvider>
         <ToastContainer position="top-right" autoClose={3000} />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/login-staff" element={<Login />} />
+          <Route path="/register-google" element={<GoogleStudentRegistration />} />
+          <Route path="/waiting-approval" element={<WaitingApproval />} />
 
           <Route element={<ProtectedRoute allowedRoles={['faculty', 'student', 'admin']} />}>
             <Route element={<Layout />}>
@@ -44,6 +59,7 @@ function App() {
                 <Route path="/submissions" element={<Submissions />} />
                 <Route path="/materials" element={<Materials />} />
                 <Route path="/faculty-management" element={<FacultyManagement />} />
+                <Route path="/reports" element={<FacultyReport />} />
               </Route>
 
               {/* Admin Only */}
@@ -55,6 +71,9 @@ function App() {
                 <Route path="/my-workbook" element={<MyWorkbook />} />
                 <Route path="/my-materials" element={<StudentMaterials />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/report" element={<StudentReport />} />
+                <Route path="/cpc" element={<CPCSelection />} />
+                <Route path="/cpc/:languageId" element={<CPCTable />} />
               </Route>
             </Route>
           </Route>

@@ -1,10 +1,81 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
-import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, GripVertical, Edit, Trash2 } from 'lucide-react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const SortableTopicRow = ({ topic, idx, onEdit, onDelete, isSortingEnabled }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: topic._id, disabled: !isSortingEnabled });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 0,
+        position: 'relative'
+    };
+
+    return (
+        <tr
+            ref={setNodeRef}
+            style={style}
+            {...(isSortingEnabled ? { ...attributes, ...listeners } : {})}
+            className={`hover:bg-indigo-50/30 transition-colors group ${isDragging ? 'bg-indigo-50 shadow-md ring-1 ring-indigo-200' : ''} ${isSortingEnabled ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        >
+            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                <div className="flex items-center gap-3">
+                    <span className="font-medium text-gray-900">{topic.name}</span>
+                </div>
+            </td>
+            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                {topic.languageId?.name || '-'}
+            </td>
+            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div className="flex items-center justify-end space-x-2">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(topic); }}
+                        className="p-1.5 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-100 rounded-md transition-all relative z-10"
+                        title="Edit"
+                    >
+                        <Edit className="w-4 h-4" />
+                        <span className="sr-only">Edit</span>
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(topic); }}
+                        className="p-1.5 text-rose-600 hover:text-rose-900 hover:bg-rose-100 rounded-md transition-all relative z-10"
+                        title="Delete"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="sr-only">Delete</span>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
+};
 
 const Topics = () => {
     const [topics, setTopics] = useState([]);
@@ -22,7 +93,14 @@ const Topics = () => {
     const [newTopics, setNewTopics] = useState([{ name: '', languageId: '' }]);
 
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
+    const itemsPerPage = 100; // Increased to allow easier sorting across many topics
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     const fetchData = async () => {
         try {
@@ -150,6 +228,53 @@ const Topics = () => {
     const handleLanguageFilterChange = (e) => {
         setFilterLanguage(e.target.value);
         setCurrentPage(1);
+    };
+
+    const handleDragEnd = async (event) => {
+        const { active, over } = event;
+
+        if (active.id !== over.id) {
+            const oldIndex = filteredTopics.findIndex((i) => i._id === active.id);
+            const newIndex = filteredTopics.findIndex((i) => i._id === over.id);
+
+            const reorderedTopics = arrayMove(filteredTopics, oldIndex, newIndex);
+            
+            // Update local state by mapping through main topics array
+            const updatedTopics = topics.map(t => {
+                const isFiltered = (t.languageId?._id || t.languageId) === filterLanguage;
+                if (isFiltered) {
+                    const idx = reorderedTopics.findIndex(rt => rt._id === t._id);
+                    if (idx !== -1) {
+                        return reorderedTopics[idx];
+                    }
+                }
+                return t;
+            });
+            
+            // Rebuild topics array to preserve order for the specific language
+            const otherLanguageTopics = topics.filter(t => (t.languageId?._id || t.languageId) !== filterLanguage);
+            setTopics([...otherLanguageTopics, ...reorderedTopics].sort((a, b) => {
+                if ((a.languageId?._id || a.languageId) === filterLanguage && (b.languageId?._id || b.languageId) === filterLanguage) {
+                    return reorderedTopics.indexOf(a) - reorderedTopics.indexOf(b);
+                }
+                return 0; // Keep others as is
+            }));
+
+            // Persist to DB
+            const orderedIds = reorderedTopics.map((item, index) => ({
+                _id: item._id,
+                order: index
+            }));
+
+            try {
+                await api.patch('/topics/reorder', { topics: orderedIds });
+                toast.success('Order updated successfully');
+            } catch (err) {
+                console.error('Failed to update order:', err);
+                toast.error('Failed to save new order');
+                fetchData();
+            }
+        }
     };
 
     const columns = [
@@ -280,12 +405,46 @@ const Topics = () => {
                 </div>
             )}
 
-            <DataTable
-                columns={columns}
-                data={currentItems}
-                onEdit={openModal}
-                onDelete={handleDelete}
-            />
+            <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-100 custom-scrollbar">
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <table className="min-w-full divide-y divide-gray-100">
+                        <thead className="bg-gray-50/50">
+                            <tr>
+                                <th className="px-4 sm:px-6 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">Topic Name</th>
+                                <th className="px-4 sm:px-6 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">Language</th>
+                                <th className="px-4 sm:px-6 py-4 text-right text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
+                            </tr>
+                        </thead>
+                        <SortableContext
+                            items={filteredTopics.map(t => t._id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {currentItems.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="3" className="px-4 sm:px-6 py-8 text-center text-gray-400 italic">No data available</td>
+                                    </tr>
+                                ) : (
+                                    currentItems.map((topic, idx) => (
+                                        <SortableTopicRow
+                                            key={topic._id}
+                                            topic={topic}
+                                            idx={idx}
+                                            onEdit={openModal}
+                                            onDelete={handleDelete}
+                                            isSortingEnabled={!!filterLanguage && !topicQuery}
+                                        />
+                                    ))
+                                )}
+                            </tbody>
+                        </SortableContext>
+                    </table>
+                </DndContext>
+            </div>
 
             <Pagination
                 totalItems={filteredTopics.length}

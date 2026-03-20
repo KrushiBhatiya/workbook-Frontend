@@ -1,0 +1,422 @@
+import { useState, useEffect, useContext } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+import { format, isSameDay, parseISO } from 'date-fns';
+import api from '../utils/api';
+import AuthContext from '../context/AuthContext';
+import Modal from '../components/Modal';
+import { FileText, Calendar as CalendarIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
+
+const StudentReport = () => {
+    const { user } = useContext(AuthContext);
+    const [date, setDate] = useState(new Date());
+    const [reports, setReports] = useState([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [studentData, setStudentData] = useState(null);
+    const [languages, setLanguages] = useState([]);
+    const [topics, setTopics] = useState([]);
+
+    const [formData, setFormData] = useState({
+        languageId: '',
+        languageName: '',
+        topicId: '',
+        topicName: '',
+        description: ''
+    });
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [profileRes, reportsRes] = await Promise.all([
+                    api.get('/students/me'),
+                    api.get('/reports/student')
+                ]);
+                setStudentData(profileRes.data);
+                setReports(reportsRes.data.data);
+                setLanguages(profileRes.data.allowedLanguageIds || []);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                toast.error('Failed to load report data');
+            }
+        };
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        if (formData.languageId) {
+            const fetchTopics = async () => {
+                try {
+                    const { data } = await api.get(`/topics?languageId=${formData.languageId}`);
+                    setTopics(data);
+                } catch (error) {
+                    console.error('Error fetching topics:', error);
+                }
+            };
+            fetchTopics();
+        } else {
+            setTopics([]);
+        }
+    }, [formData.languageId]);
+
+    const handleLanguageChange = (e) => {
+        const langId = e.target.value;
+        const lang = languages.find(l => l._id === langId);
+        setFormData({
+            ...formData,
+            languageId: langId,
+            languageName: lang ? lang.name : '',
+            topicId: '',
+            topicName: ''
+        });
+    };
+
+    const handleTopicChange = (e) => {
+        const topicId = e.target.value;
+        const topic = topics.find(t => t._id === topicId);
+        setFormData({
+            ...formData,
+            topicId: topicId,
+            topicName: topic ? topic.name : ''
+        });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!formData.languageId || !formData.topicId || !formData.description) {
+            toast.warning('Please fill all fields');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const payload = {
+                date: format(new Date(), 'yyyy-MM-dd'),
+                googleAccessToken: user?.googleAccessToken,
+                ...formData
+            };
+
+            if (user?.googleId && !user?.googleAccessToken) {
+                toast.warning('Note: Email might not send. Please Logout and Login again to grant email permissions.');
+            }
+
+            await api.post('/reports', payload);
+            toast.success('Report submitted successfully');
+            setIsModalOpen(false);
+            setFormData({ languageId: '', languageName: '', topicId: '', topicName: '', description: '' });
+
+            // Refresh reports
+            const { data } = await api.get('/reports/student');
+            setReports(data.data);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to submit report');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getReportForDate = (d) => {
+        return reports.find(r => isSameDay(parseISO(r.date), d));
+    };
+
+    const tileContent = ({ date, view }) => {
+        if (view === 'month') {
+            const report = getReportForDate(date);
+            if (report) {
+                return (
+                    <div className="mt-1 flex flex-col items-center">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mb-1"></div>
+                        <div className="text-[10px] leading-tight text-indigo-600 font-bold hidden sm:block truncate w-full px-1 text-center">
+                            {report.languageId?.name}
+                        </div>
+                        <div className="text-[10px] leading-tight text-gray-500 hidden sm:block truncate w-full px-1 text-center">
+                            {report.topicId?.name}
+                        </div>
+                    </div>
+                );
+            }
+        }
+        return null;
+    };
+
+    const tileClassName = ({ date, view }) => {
+        if (view === 'month') {
+            const report = getReportForDate(date);
+            const classes = [];
+            if (report) classes.push('report-submitted-tile');
+            if (date.getDay() === 0) classes.push('sunday-tile');
+            return classes.join(' ');
+        }
+        return null;
+    };
+
+    const isTodaySubmitted = getReportForDate(new Date());
+
+    return (
+        <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
+            <div className="max-w-6xl mx-auto">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                            <CalendarIcon className="w-8 h-8 text-indigo-600" />
+                            Daily Report
+                        </h1>
+                        <p className="text-gray-500 mt-1">Track your daily progress and learning milestones.</p>
+                    </div>
+
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        disabled={isTodaySubmitted}
+                        className={`
+                            px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2
+                            ${isTodaySubmitted
+                                ? 'bg-green-100 text-green-700 cursor-not-allowed shadow-none'
+                                : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95'}
+                        `}
+                    >
+                        {isTodaySubmitted ? (
+                            <>
+                                <CheckCircle className="w-5 h-5" />
+                                Today's Report Submitted
+                            </>
+                        ) : (
+                            <>
+                                <FileText className="w-5 h-5" />
+                                Today Report
+                            </>
+                        )}
+                    </button>
+                </div>
+
+                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-4 sm:p-8">
+                    <style>{`
+                        .react-calendar {
+                            width: 100% !important;
+                            border: none !important;
+                            font-family: inherit !important;
+                        }
+                        .react-calendar__navigation {
+                            margin-bottom: 2rem !important;
+                        }
+                        .react-calendar__navigation button {
+                            min-width: 44px !important;
+                            background: none !important;
+                            font-size: 1.25rem !important;
+                            font-weight: 700 !important;
+                            color: #4f46e5 !important;
+                            border-radius: 12px !important;
+                            transition: all 0.2s !important;
+                        }
+                        .react-calendar__navigation button:hover {
+                            background-color: #f3f4f6 !important;
+                        }
+                        .react-calendar__month-view__weekdays {
+                            font-weight: 700 !important;
+                            text-transform: uppercase !important;
+                            font-size: 0.875rem !important;
+                            color: #6b7280 !important;
+                            padding-bottom: 1rem !important;
+                        }
+                        .react-calendar__month-view__days__day {
+                            padding: 1.5rem 0.5rem !important;
+                            font-size: 1.125rem !important;
+                            transition: all 0.2s !important;
+                        }
+                        .react-calendar__tile {
+                            border-radius: 16px !important;
+                            position: relative !important;
+                        }
+                        .react-calendar__tile--now {
+                            background: #eef2ff !important;
+                            color: #4f46e5 !important;
+                            font-weight: 800 !important;
+                        }
+                        .react-calendar__tile--active {
+                            background: #4f46e5 !important;
+                            color: white !important;
+                            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4) !important;
+                        }
+                        .react-calendar__tile:enabled:hover div,
+                        .react-calendar__tile:enabled:hover abbr {
+                            color: white !important;
+                        }
+                        .react-calendar__tile:enabled:hover .w-2 {
+                            background-color: white !important;
+                        }
+                        .react-calendar__tile--active div {
+                            color: white !important;
+                        }
+                        .react-calendar__tile--active .w-2 {
+                            background-color: white !important;
+                        }
+                        .react-calendar__tile--active:enabled:hover, .react-calendar__tile--active:enabled:focus {
+                            background: #4338ca !important;
+                        }
+                        .report-submitted-tile {
+                            background-color: #f0fdf4 !important;
+                        }
+                        .report-submitted-tile abbr {
+                            color: #166534 !important;
+                            font-weight: 700 !important;
+                        }
+                        .report-submitted-tile div {
+                            color: #166534 !important;
+                            opacity: 0.9;
+                        }
+                        .report-submitted-tile .w-2 {
+                            background-color: #22c55e !important;
+                        }
+                        .report-submitted-tile:enabled:hover div,
+                        .report-submitted-tile:enabled:hover abbr {
+                            color: black !important;
+                        }
+                        .report-submitted-tile:enabled:hover .w-2 {
+                            background-color: black !important;
+                        }
+                        /* Active tile hover should override submitted tile hover */
+                        .react-calendar__tile--active:enabled:hover div,
+                        .react-calendar__tile--active:enabled:hover abbr {
+                            color: white !important;
+                        }
+                        .react-calendar__tile--active:enabled:hover .w-2 {
+                            background-color: white !important;
+                        }
+                        .react-calendar__month-view__days__day--neighboringMonth {
+                            color: #d1d5db !important;
+                        }
+                        /* Reset weekend headers/days, then specifically color Sunday */
+                        .react-calendar__month-view__weekdays__weekday--weekend abbr {
+                            color: #6b7280 !important;
+                        }
+                        .react-calendar__month-view__weekdays__weekday--weekend:last-child abbr {
+                            color: #ef4444 !important;
+                        }
+                        .react-calendar__month-view__days__day--weekend {
+                            color: #374151 !important;
+                        }
+                        .sunday-tile:not(.react-calendar__tile--active) {
+                            color: #ef4444 !important;
+                        }
+                        .sunday-tile:not(.react-calendar__tile--active) abbr {
+                            color: #ef4444 !important;
+                        }
+                    `}</style>
+                    <Calendar
+                        onChange={setDate}
+                        value={date}
+                        tileContent={tileContent}
+                        tileClassName={tileClassName}
+                    />
+                </div>
+            </div>
+
+            {/* Submission Modal */}
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="Submit Today's Report"
+            >
+                <form onSubmit={handleSubmit} className="space-y-6 p-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Student Name</label>
+                            <input
+                                type="text"
+                                value={studentData?.name || ''}
+                                readOnly
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Date</label>
+                            <input
+                                type="text"
+                                value={format(new Date(), 'dd MMM yyyy')}
+                                readOnly
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Language</label>
+                        <select
+                            value={formData.languageId}
+                            onChange={handleLanguageChange}
+                            required
+                            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+                        >
+                            <option value="">Select Language</option>
+                            {languages.map(lang => (
+                                <option key={lang._id} value={lang._id}>{lang.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Topic</label>
+                        <select
+                            value={formData.topicId}
+                            onChange={handleTopicChange}
+                            required
+                            disabled={!formData.languageId}
+                            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                        >
+                            <option value="">Select Topic</option>
+                            {topics.map(topic => (
+                                <option key={topic._id} value={topic._id}>{topic.name}</option>
+                            ))}
+                        </select>
+                        {!formData.languageId && (
+                            <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                Please select a language first
+                            </p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
+                        <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            required
+                            rows="5"
+                            placeholder="Describe what you worked on today, challenges faced, and goals achieved..."
+                            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none resize-none"
+                        ></textarea>
+                    </div>
+
+                    <div className="flex justify-end gap-4 mt-8">
+                        <button
+                            type="button"
+                            onClick={() => setIsModalOpen(false)}
+                            className="px-6 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`
+                                px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg flex items-center gap-2
+                                ${loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-200 active:scale-95'}
+                            `}
+                        >
+                            {loading && (
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            )}
+                            Submit Report
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+        </div>
+    );
+};
+
+export default StudentReport;

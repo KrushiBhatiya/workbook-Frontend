@@ -29,11 +29,14 @@ const facultyLinks = [
     { path: '/workbooks', label: 'Workbooks', icon: Book },
     { path: '/materials', label: 'Materials', icon: FileText },
     { path: '/submissions', label: 'Submissions', icon: Upload },
+    { path: '/reports', label: 'Reports', icon: FileText },
 ];
 
 const studentLinks = [
     { path: '/my-workbook', label: 'My Workbook', icon: BookOpen },
     { path: '/my-materials', label: 'Materials', icon: Files },
+    { path: '/report', label: 'Report', icon: FileText },
+    { path: '/cpc', label: 'CPC', icon: FileText },
     { path: '/profile', label: 'My Profile', icon: User },
     // { path: '/submissions/my', label: 'My Submissions', icon: Upload },
 ];
@@ -43,6 +46,7 @@ const adminLinks = [
     { path: '/faculty-management', label: 'Faculty Management', icon: Shield },
     { path: '/students', label: 'All Students', icon: Users }, // To assign faculty
     { path: '/submissions', label: 'Submissions', icon: Upload },
+    { path: '/reports', label: 'Reports', icon: FileText },
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {

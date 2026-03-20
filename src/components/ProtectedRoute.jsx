@@ -13,6 +13,11 @@ const ProtectedRoute = ({ allowedRoles }) => {
         return <Navigate to="/login" replace />;
     }
 
+    // New: If student is pending, force them to Waiting Approval
+    if (user.role === 'student' && user.status === 'Pending') {
+        return <Navigate to="/waiting-approval" replace />;
+    }
+
     if (allowedRoles && !allowedRoles.includes(user.role)) {
         return <Navigate to="/unauthorized" replace />; // Or redirect to home
     }

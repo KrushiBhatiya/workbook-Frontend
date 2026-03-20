@@ -3,7 +3,9 @@ import api from '../utils/api';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, CheckCircle } from 'lucide-react';
+import StudentDetailModal from '../components/StudentDetailModal';
+import { toast } from 'react-toastify';
 
 // Helper: get the logged-in user's data from localStorage
 const getLoggedInUser = () => {
@@ -29,11 +31,9 @@ const Students = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
-    // History modal state
-    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-    const [historyStudent, setHistoryStudent] = useState(null);
-    const [historyData, setHistoryData] = useState([]);
-    const [historyLoading, setHistoryLoading] = useState(false);
+    // Detail modal state
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [detailStudent, setDetailStudent] = useState(null);
 
     const initialFormState = {
         name: '',
@@ -204,24 +204,36 @@ const Students = () => {
         }
     };
 
-    const openHistoryModal = async (student) => {
-        setHistoryStudent(student);
-        setHistoryData([]);
-        setIsHistoryOpen(true);
-        setHistoryLoading(true);
-        try {
-            const { data } = await api.get(`/submissions/student/${student._id}`);
-            setHistoryData(data);
-        } catch (error) {
-            console.error('Error fetching history:', error);
-        } finally {
-            setHistoryLoading(false);
+    const openDetailModal = (student) => {
+        setDetailStudent(student);
+        setIsDetailModalOpen(true);
+    };
+
+    const handleApprove = async (student) => {
+        if (window.confirm('Are you sure you want to approve this student?')) {
+            try {
+                await api.put(`/students/${student._id}/approve`);
+                toast.success('Student approved successfully');
+                fetchStudents(filterFacultyId);
+            } catch (error) {
+                console.error('Error approving student:', error);
+                toast.error(error.response?.data?.message || 'Error granting approval');
+            }
         }
     };
 
     const columns = [
         { header: 'Name', accessor: 'name' },
         { header: 'Email', accessor: 'email' },
+        {
+            header: 'Status',
+            render: (row) => (
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${row.status === 'Pending' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                    {row.status || 'Approved'}
+                </span>
+            )
+        },
         { header: 'Batch Time', accessor: 'batchTime' },
         { header: 'Course', render: (row) => row.courseId?.name || '-' },
         {
@@ -237,15 +249,26 @@ const Students = () => {
             )
         },
         {
-            header: 'History',
+            header: 'Actions',
             render: (row) => (
-                <button
-                    onClick={(e) => { e.stopPropagation(); openHistoryModal(row); }}
-                    title="View Submission History"
-                    className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-md transition-colors"
-                >
-                    <Eye className="w-4 h-4" />
-                </button>
+                <div className="flex justify-center items-center gap-2">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); openDetailModal(row); }}
+                        title="View Student Details"
+                        className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-md transition-colors"
+                    >
+                        <Eye className="w-4 h-4" />
+                    </button>
+                    {row.status === 'Pending' && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleApprove(row); }}
+                            title="Approve Student"
+                            className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition-colors flex items-center"
+                        >
+                            <CheckCircle className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
             )
         }
     ];
@@ -281,13 +304,6 @@ const Students = () => {
                             onChange={handleFilterNameChange}
                         />
                     </div>
-                    <button
-                        onClick={() => openModal()}
-                        className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 whitespace-nowrap"
-                    >
-                        <Plus className="w-5 h-5 mr-2" />
-                        Add Student
-                    </button>
                 </div>
             </div>
 
@@ -428,10 +444,10 @@ const Students = () => {
                         </div>
                     </div>
 
-                    {/* Faculty select — only shown in Edit mode */}
-                    {currentStudent && (
+                    {/* Faculty select — only shown in Edit mode (or if admin is assigning) */}
+                    {(currentStudent || getLoggedInUser()?.role === 'admin') && (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Assign Faculty</label>
+                            <label className="block text-sm font-medium text-gray-700">Your Faculty</label>
                             <select
                                 name="facultyId"
                                 required
@@ -466,120 +482,11 @@ const Students = () => {
                 </form>
             </Modal>
 
-            {/* Submission History Modal — same format as Submissions page */}
-            {isHistoryOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-                        {/* Header */}
-                        <div className="p-6 border-b flex justify-between items-start bg-indigo-50">
-                            <div>
-                                <h2 className="text-xl font-bold text-indigo-900">{historyStudent?.name}'s Submissions</h2>
-                                <p className="text-indigo-600 text-sm mt-1">Complete submission history — latest first</p>
-                                <div className="mt-3 flex items-center flex-wrap gap-2">
-                                    <span className="text-sm font-semibold text-gray-700 bg-white px-2 py-1 rounded-md border shadow-sm">
-                                        Languages :- ({historyStudent?.allowedLanguageIds?.length || 0})
-                                    </span>
-                                    {historyStudent?.allowedLanguageIds?.map(lang => (
-                                        <span key={lang._id} className="text-xs font-medium bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full border border-indigo-200">
-                                            {lang.name}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setIsHistoryOpen(false)}
-                                className="text-gray-400 hover:text-gray-600 transition"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        </div>
-
-                        {/* Body */}
-                        <div className="p-6 overflow-y-auto flex-1">
-                            {historyLoading ? (
-                                <div className="flex items-center justify-center py-16 text-gray-500">
-                                    <svg className="animate-spin h-6 w-6 mr-3 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Loading history...
-                                </div>
-                            ) : historyData.length === 0 ? (
-                                <div className="text-center py-16 text-gray-400">
-                                    <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                    <p className="font-medium text-lg">No submissions yet</p>
-                                    <p className="text-sm mt-1">This student hasn't submitted any answers.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {historyData.map((sub, idx) => (
-                                        <div key={sub._id} className="border border-gray-200 rounded-lg p-5 hover:border-indigo-200 transition-all bg-gray-50/50">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded">Q{idx + 1}</span>
-                                                    <h3 className="font-bold text-gray-900">{sub.questionId?.question || 'Unknown Question'}</h3>
-                                                </div>
-                                                <div className="text-xs text-gray-500 bg-white px-2 py-1 rounded border whitespace-nowrap ml-3">
-                                                    {new Date(sub.submittedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                                                </div>
-                                            </div>
-
-                                            <div className="grid md:grid-cols-2 gap-6 mt-4">
-                                                <div>
-                                                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Answer</h4>
-                                                    <div className="bg-white p-3 rounded border text-sm text-gray-800 whitespace-pre-wrap">
-                                                        {sub.answerText}
-                                                    </div>
-                                                </div>
-
-                                                {sub.imageUrl && (
-                                                    <div>
-                                                        <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Attachment</h4>
-                                                        <a
-                                                            href={sub.imageUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="block group relative rounded-lg overflow-hidden border"
-                                                        >
-                                                            <img
-                                                                src={sub.imageUrl}
-                                                                alt="Submission"
-                                                                className="w-full h-48 object-cover group-hover:opacity-90 transition"
-                                                            />
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition">
-                                                                <span className="bg-white text-gray-900 text-xs font-bold px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition transform scale-90 group-hover:scale-100">
-                                                                    View Full Size
-                                                                </span>
-                                                            </div>
-                                                        </a>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="mt-3 flex gap-4 text-xs text-gray-500 pt-3 border-t">
-                                                <span><span className="font-semibold">Language:</span> {sub.languageId?.name || '-'}</span>
-                                                <span><span className="font-semibold">Topic:</span> {sub.topicId?.name || '-'}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
-                            <span className="text-sm text-gray-500">
-                                {historyData.length > 0 ? `${historyData.length} submission${historyData.length !== 1 ? 's' : ''} total` : ''}
-                            </span>
-                            <button
-                                onClick={() => setIsHistoryOpen(false)}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {isDetailModalOpen && (
+                <StudentDetailModal
+                    student={detailStudent}
+                    onClose={() => setIsDetailModalOpen(false)}
+                />
             )}
         </div>
     );

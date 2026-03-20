@@ -22,6 +22,27 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
+    const googleLogin = async (token, googleAccessToken) => {
+        const { data } = await api.post('/auth/google', { token });
+        
+        if (data.status === 'requires_registration') {
+             return data;
+        }
+
+        const userData = { ...data, googleAccessToken };
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        return userData;
+    };
+
+    const googleRegister = async (registrationData, googleAccessToken) => {
+        const { data } = await api.post('/auth/google/register', registrationData);
+        const userData = { ...data, googleAccessToken };
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        return userData;
+    };
+
     const register = async (userData) => {
         const { data } = await api.post('/auth/register', userData);
         localStorage.setItem('user', JSON.stringify(data));
@@ -34,8 +55,21 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    const refreshUserStatus = async () => {
+        try {
+            const { data } = await api.get('/auth/profile');
+            const updatedUser = { ...user, ...data };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            setUser(updatedUser);
+            return data;
+        } catch (error) {
+            console.error('Error refreshing status:', error);
+            return null;
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, loading, googleLogin, googleRegister, refreshUserStatus }}>
             {children}
         </AuthContext.Provider>
     );
