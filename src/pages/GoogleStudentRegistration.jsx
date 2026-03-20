@@ -24,8 +24,7 @@ const GoogleStudentRegistration = () => {
         batchTime: '',
         contact: '',
         courseId: '',
-        facultyId: '',
-        password: '' // Optional setting for password
+        facultyId: ''
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -120,17 +119,6 @@ const GoogleStudentRegistration = () => {
                                     disabled
                                     className="w-full px-5 py-4 bg-gray-100 border border-gray-200 rounded-2xl outline-none text-sm text-gray-400 cursor-not-allowed"
                                     value={formData.email}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Password (Optional)</label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    placeholder="Set a local password"
-                                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-gray-900 text-sm"
-                                    value={formData.password}
-                                    onChange={handleChange}
                                 />
                             </div>
                             <div className="space-y-2">
