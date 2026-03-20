@@ -30,7 +30,7 @@ const StudentDetailModal = ({ student, onClose }) => {
                 setReports(studentReports.sort((a, b) => new Date(b.date) - new Date(a.date)));
 
                 if (activeTab === 'cpc' && selectedLanguage) {
-                    processCPC(studentReports, selectedLanguage._id);
+                    processCPC(studentReports, selectedLanguage._id, languageTopics);
                 }
             }
         } catch (error) {

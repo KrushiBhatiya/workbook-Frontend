@@ -55,8 +55,6 @@ const CPCTable = () => {
     };
 
     const processReports = () => {
-        if (languageReports.length === 0) return [];
-
         // Global latest date across ALL languages
         const sortedAll = [...allReports].sort((a, b) => new Date(b.date) - new Date(a.date));
         const globalLatestDate = sortedAll.length > 0 ? sortedAll[0].date : null;
@@ -204,7 +202,7 @@ const CPCTable = () => {
                                 {cpcData.length === 0 ? (
                                     <tr>
                                         <td colSpan="5" className="px-4 py-8 text-center text-gray-500 italic text-sm">
-                                            No report data found for this language.
+                                            No topics or report data found for this language.
                                         </td>
                                     </tr>
                                 ) : (
