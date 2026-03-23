@@ -65,7 +65,12 @@ const CPCTable = () => {
         // Base list comes from all topics in the curriculum
         const topicRows = languageTopics.map(topic => {
             const topicId = topic._id;
-            const reportsForTopic = languageReports.filter(r => (r.topicId?._id || r.topicId) === topicId);
+            const reportsForTopic = languageReports.filter(r => {
+                const ids = Array.isArray(r.topicIds)
+                    ? r.topicIds.map(t => t?._id || t)
+                    : [];
+                return ids.some(id => String(id) === String(topicId));
+            });
             
             if (reportsForTopic.length === 0) {
                 return {

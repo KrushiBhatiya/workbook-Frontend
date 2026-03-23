@@ -233,7 +233,9 @@ const FacultyReport = () => {
                                                         {report.languageId?.name}
                                                     </p>
                                                     <p className="text-gray-400 italic">
-                                                        {report.topicId?.name}
+                                                        {Array.isArray(report.topicIds)
+                                                            ? report.topicIds.map(t => t?.name).filter(Boolean).join(', ')
+                                                            : report.topicIds?.name || '-'}
                                                     </p>
                                                 </div>
                                             </td>
@@ -302,7 +304,11 @@ const FacultyReport = () => {
                                 </div>
                                 <div className="space-y-1">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Topic</span>
-                                    <p className="text-lg font-bold text-gray-800">{selectedReport.topicId?.name}</p>
+                                    <p className="text-lg font-bold text-gray-800">
+                                        {Array.isArray(selectedReport.topicIds)
+                                            ? selectedReport.topicIds.map(t => t?.name).filter(Boolean).join(', ')
+                                            : selectedReport.topicIds?.name || '-'}
+                                    </p>
                                 </div>
                             </div>
 

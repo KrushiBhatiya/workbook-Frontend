@@ -21,8 +21,7 @@ const StudentReport = () => {
     const [formData, setFormData] = useState({
         languageId: '',
         languageName: '',
-        topicId: '',
-        topicName: '',
+        topicIds: [],
         description: ''
     });
 
@@ -67,34 +66,41 @@ const StudentReport = () => {
             ...formData,
             languageId: langId,
             languageName: lang ? lang.name : '',
-            topicId: '',
-            topicName: ''
+            topicIds: []
         });
     };
 
-    const handleTopicChange = (e) => {
-        const topicId = e.target.value;
-        const topic = topics.find(t => t._id === topicId);
-        setFormData({
-            ...formData,
-            topicId: topicId,
-            topicName: topic ? topic.name : ''
+    const toggleTopic = (topicId) => {
+        setFormData(prev => {
+            const already = prev.topicIds.includes(topicId);
+            return {
+                ...prev,
+                topicIds: already
+                    ? prev.topicIds.filter(id => id !== topicId)
+                    : [...prev.topicIds, topicId]
+            };
         });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.languageId || !formData.topicId || !formData.description) {
-            toast.warning('Please fill all fields');
+        if (!formData.languageId || formData.topicIds.length === 0 || !formData.description) {
+            toast.warning('Please fill all fields and select at least one topic');
             return;
         }
 
         setLoading(true);
         try {
+            const selectedTopics = topics.filter(t => formData.topicIds.includes(t._id));
+            const topicNames = selectedTopics.map(t => t.name).join(', ');
             const payload = {
                 date: format(new Date(), 'yyyy-MM-dd'),
                 googleAccessToken: user?.googleAccessToken,
-                ...formData
+                languageId: formData.languageId,
+                languageName: formData.languageName,
+                topicIds: formData.topicIds,
+                topicNames,
+                description: formData.description
             };
 
             if (user?.googleId && !user?.googleAccessToken) {
@@ -104,7 +110,7 @@ const StudentReport = () => {
             await api.post('/reports', payload);
             toast.success('Report submitted successfully');
             setIsModalOpen(false);
-            setFormData({ languageId: '', languageName: '', topicId: '', topicName: '', description: '' });
+            setFormData({ languageId: '', languageName: '', topicIds: [], description: '' });
 
             // Refresh reports
             const { data } = await api.get('/reports/student');
@@ -131,7 +137,9 @@ const StudentReport = () => {
                             {report.languageId?.name}
                         </div>
                         <div className="text-[10px] leading-tight text-gray-500 hidden sm:block truncate w-full px-1 text-center">
-                            {report.topicId?.name}
+                            {Array.isArray(report.topicIds)
+                                ? report.topicIds.map(t => t?.name).filter(Boolean).join(', ')
+                                : report.topicIds?.name}
                         </div>
                     </div>
                 );
@@ -355,24 +363,48 @@ const StudentReport = () => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Topic</label>
-                        <select
-                            value={formData.topicId}
-                            onChange={handleTopicChange}
-                            required
-                            disabled={!formData.languageId}
-                            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none disabled:bg-gray-50 disabled:cursor-not-allowed"
-                        >
-                            <option value="">Select Topic</option>
-                            {topics.map(topic => (
-                                <option key={topic._id} value={topic._id}>{topic.name}</option>
-                            ))}
-                        </select>
-                        {!formData.languageId && (
+                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                            Topics
+                            {formData.languageId && (
+                                <span className="ml-2 text-xs text-indigo-500 font-normal">
+                                    ({formData.topicIds.length} selected)
+                                </span>
+                            )}
+                        </label>
+                        {!formData.languageId ? (
                             <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                                 <AlertCircle className="w-3 h-3" />
                                 Please select a language first
                             </p>
+                        ) : topics.length === 0 ? (
+                            <p className="text-xs text-gray-400 mt-2 italic">No topics available for this language.</p>
+                        ) : (
+                            <div className="border border-gray-300 rounded-xl max-h-48 overflow-y-auto divide-y divide-gray-100">
+                                {topics.map(topic => (
+                                    <label
+                                        key={topic._id}
+                                        className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
+                                            formData.topicIds.includes(topic._id)
+                                                ? 'bg-indigo-50'
+                                                : 'hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.topicIds.includes(topic._id)}
+                                            onChange={() => toggleTopic(topic._id)}
+                                            className="w-4 h-4 accent-indigo-600 shrink-0"
+                                        />
+                                        <span className={`text-sm ${
+                                            formData.topicIds.includes(topic._id)
+                                                ? 'text-indigo-700 font-semibold'
+                                                : 'text-gray-700'
+                                        }`}>
+                                            {topic.name}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
                         )}
                     </div>
 

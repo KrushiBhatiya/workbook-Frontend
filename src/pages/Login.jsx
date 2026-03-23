@@ -51,7 +51,7 @@ const Login = () => {
             setError('');
             const result = await signInWithGoogle();
             const idToken = await result.user.getIdToken();
-            
+
             // Get Google Access Token for Gmail API
             const credential = GoogleAuthProvider.credentialFromResult(result);
             const googleAccessToken = credential.accessToken;
@@ -60,13 +60,13 @@ const Login = () => {
 
             if (data.status === 'requires_registration') {
                 toast.info('Welcome! Please complete your profile to register.');
-                navigate('/register-google', { 
-                    state: { 
-                        email: data.email, 
-                        name: data.name, 
+                navigate('/register-google', {
+                    state: {
+                        email: data.email,
+                        name: data.name,
                         googleId: data.googleId,
                         googleAccessToken: googleAccessToken // Pass to registration page
-                    } 
+                    }
                 });
             } else if (data.status === 'Pending') {
                 navigate('/waiting-approval');
